@@ -1,127 +1,121 @@
-# plugin-health-check
+<p align="center">
+  <img src="assets/hero.svg" width="860" alt="plugin-health-check — a shield with a checkmark; tagline: Audit your agent plugins before they audit you. Badges: R1 conflict, R9 budget risk, 10 rules 0 deps.">
+</p>
 
-给你的 agent 插件做"体检"：安装前预检冲突，安装后定期审计，告别"看到好插件就装、出问题再人肉二分禁用"的死循环。
+<p align="center">
+  <strong>Plugin conflict auditor for agent ecosystems.</strong><br>
+  Pre-install checks and full audits for Claude Code / DSH / WorkBuddy-style plugins.
+</p>
 
-适用于 Claude Code / DSH / WorkBuddy 风格的插件目录结构（`plugin.json` + `.mcp.json` + `skills/` + `commands/` + `hooks/`）。纯 Python 标准库，零依赖，Python 3.8+。
+<p align="center">
+  <a href="#quick-start">Quick Start</a> •
+  <a href="#what-it-catches">Rules</a> •
+  <a href="#two-modes">Modes</a> •
+  <a href="#why-this-exists">Why</a> •
+  <a href="README.zh-CN.md">中文文档</a>
+</p>
 
-## 为什么需要它
+<p align="center">
+  <a href="https://github.com/GlariaLuminous/plugin-health-check/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="License: MIT"></a>
+  <img src="https://img.shields.io/badge/python-3.8%2B-3776AB.svg?logo=python&logoColor=white" alt="Python 3.8+">
+  <img src="https://img.shields.io/badge/dependencies-0-brightgreen.svg" alt="Zero dependencies">
+  <img src="https://img.shields.io/badge/rules-10-8b5cf6.svg" alt="10 detection rules">
+  <img src="https://img.shields.io/badge/tests-23%20passing-brightgreen.svg" alt="23 tests passing">
+</p>
 
-真实世界里插件混装的事故比比皆是：
+---
 
-- 两个 MCP 服务器暴露同名工具 → 所有请求直接 400 报错（LM Studio #2497）
-- 工具名超过 64 字符被截断 → 31 个工具里 9 个撞名，模型反复重试烧光预算（openworker #746）
-- 两个上下文压缩插件同时启用 → 各自压缩，关键上下文被弄丢
-- 插件 `.mcp.json` 缺 `mcpServers` 包裹层 → MCP 服务器被**静默忽略**（Context7 真实 bug）
-- 某插件带 126 个 skill → 371 条 skill 描述被静默丢弃（Vercel 插件真实事故）
+**Everyone installs plugins on impulse. Nobody checks what conflicts with what — until something silently breaks.**
 
-这些问题的共同点：**安装零门槛，代价后置且静默爆发**。本 skill 把社区手动排查方法论自动化。
+Two MCP servers expose a tool with the same name, and *every request* starts failing with a 400. A plugin ships a malformed `.mcp.json`, and its servers are *silently ignored forever*. Two context-compression plugins both do their job, and together they *delete the context you needed*.
 
-## 检测规则（R1-R10）
+The community's answer today is "disable half your plugins and bisect." This skill turns that into one command.
 
-| 规则 | 严重级 | 检测内容 |
-|------|--------|---------|
-| R1 | 🔴 fatal | 多个插件定义同名 MCP 服务器（互相静默覆盖） |
-| R2 | 🟠 high | 声明的工具名过长，截断后会撞名或调用失败 |
-| R3 | 🟠 high | 多个插件抢同一个斜杠命令 |
-| R4 | 🟡 medium | 工具事件 hook 用 `*` 通配 / 多插件 hook 同一工具 |
-| R5 | 🟡 medium | skill 描述触发词语义重叠（模型选错 skill） |
-| R6 | 🟡 medium | 多个插件提供同类能力（模型选择困难、反复确认） |
-| R7 | ⚪ low | 上游仓库 90+ 天未更新（需 `--online`） |
-| R8 | 🔴 fatal | 配置格式错误：缺 `mcpServers` 包裹层、JSON 损坏、缺 SKILL.md 等 |
-| R9 | 🟠 high | skill 描述总量超 token 预算（会被静默丢弃） |
-| R10 | 🟣 security | 插件要求 `bypassPermissions` 或通配符权限 |
+## Quick Start
 
-## 安装
-
-作为 skill 安装（Claude Code / 兼容宿主）：
+Works as a standalone CLI — no agent, no install, no dependencies beyond Python 3.8+:
 
 ```bash
-# 克隆到 skill 目录
 git clone https://github.com/GlariaLuminous/plugin-health-check.git
+python plugin-health-check/scripts/plugin_health_check.py --root ~/.claude/plugins
+```
+
+Or install it as a skill so your agent runs the audit for you:
+
+```bash
 cp -r plugin-health-check ~/.claude/skills/plugin-health-check
 ```
 
-或者直接在对话中对 agent 说：
+Then just say: *"检查一下我的插件"* / *"audit my plugins"* — or, before installing something new: *"看看这个插件能不能装"*.
 
-```
-帮我安装这个 skill：https://github.com/GlariaLuminous/plugin-health-check
-```
+<p align="center">
+  <img src="assets/demo.svg" width="860" alt="Terminal demo: scanning 8 plugins finds 1 fatal (R1 duplicate MCP server 'filesystem' shared by fs-mcp and file-tools), 1 high (R3 duplicate /review command), 2 medium. Verdict line: RESULT: FAIL - fix before relying on these plugins.">
+</p>
 
-也可以只把扫描器当独立 CLI 用，不需要任何宿主。
+## Two Modes
 
-## 使用
+| You want to… | Run |
+|---|---|
+| Audit everything installed | `python scripts/plugin_health_check.py --root <plugins_dir>` |
+| Check a plugin **before** installing it | `... --root <plugins_dir> --candidate <plugin_dir>` |
+| Get machine-readable output (CI gates) | `... --json` |
+| Also check upstream repos for staleness | `... --online` |
 
-### 场景 1：全量体检
+Exit codes: `0` clean · `1` fatal findings (gate your CI on it) · `2` usage error.
 
-对 agent 说"**检查一下我安装的插件**"，或手动运行：
+## What It Catches
 
-```bash
-python scripts/plugin_health_check.py --root ~/.claude/plugins
-```
+Ten rules, each distilled from a real, documented incident:
 
-加 `--online` 检查上游仓库活跃度；加 `--json` 输出机器可读报告。
+| Rule | Severity | Catches | Real-world origin |
+|---|---|---|---|
+| **R1** | 🔴 fatal | Duplicate MCP server names across plugins | One silently overrides the other |
+| **R2** | 🟠 high | Tool names that collide after 64-char truncation | [openworker #746](https://github.com/andrewyng/openworker/issues/746) — 9 of 31 tools collided |
+| **R3** | 🟠 high | Two plugins claiming the same slash command | Undefined behavior on invoke |
+| **R4** | 🟡 medium | Wildcard `*` hooks on tool events; parallel hooks on one tool | Double side-effects, silent denys |
+| **R5** | 🟡 medium | Overlapping skill trigger words | Model loads the wrong skill — or both |
+| **R6** | 🟡 medium | Multiple plugins serving the same capability | Model indecision, repeated confirmation prompts |
+| **R7** | ⚪ low | Upstream repo untouched for 90+ days (`--online`) | Drift from platform changes |
+| **R8** | 🔴 fatal | Config format errors: missing `mcpServers` wrapper, broken JSON, missing SKILL.md | The Context7 silent-failure pattern |
+| **R9** | 🟠 high | Skill descriptions exceeding the prompt budget | Vercel plugin: 126 skills → 371 descriptions dropped |
+| **R10** | 🟣 security | `bypassPermissions` or wildcard allow-lists | Acts without ever asking you |
 
-### 场景 2：安装前预检
+## Design Principles
 
-对 agent 说"**帮我看看这个插件能不能装**"，或手动运行：
+- **Reports, never touches.** The scanner is read-only. It will not disable, move, or "fix" anything — you decide.
+- **Zero dependencies.** Pure stdlib. Paste it anywhere, it runs.
+- **No false alarms on lifecycle hooks.** `*` matchers on `SessionStart`/`Stop` are legitimate — only tool events get flagged.
+- **The rule library is a living asset.** R1–R10 come from real GitHub issues. New incident patterns become new rules.
 
-```bash
-# 先把候选插件拉下来
-git clone <插件仓库> /tmp/candidate-plugin
+## Honest Limitations
 
-# 预检：只报告它会和现有插件产生什么冲突
-python scripts/plugin_health_check.py --root ~/.claude/plugins --candidate /tmp/candidate-plugin
-```
+- Static analysis only: it reads declared configs, so MCP tool-name collisions (R2) are caught when plugins declare their tools — runtime-discovered tools are out of scope.
+- R5's overlap detection is keyword-based heuristics, not embeddings. It trades a little noise for zero cost and zero network.
+- R7 requires `--online` and reads only public GitHub metadata.
 
-输出结论分三档：**安全安装 / 谨慎安装 / 不建议安装**。
+A tool that can say "you're fine" is one you can trust when it says you're not.
 
-### 输出示例
-
-```
-plugin-health-check report
-root: /home/me/.claude/plugins
-plugins scanned: 8
-
-findings: fatal: 1, high: 1, medium: 2
-
-[FATAL] (R1) MCP server 'filesystem' defined by multiple plugins: fs-mcp, file-tools - one will silently override the other
-    -> rename the server in one plugin or disable one of them
-[HIGH] (R3) slash command '/review' claimed by multiple plugins: code-review, pr-helper - behavior is undefined
-    -> disable one plugin or ask the author to namespace the command
-[MEDIUM] (R6) category 'browser' is served by multiple plugins: playwright-mcp, browser-tools ...
-    -> keep one entry point per capability
-
-RESULT: FAIL - fatal issues present, fix before relying on these plugins
-```
-
-退出码：`0` 无致命问题，`1` 有 fatal 级发现（可用于 CI 门禁），`2` 用法/IO 错误。
-
-## 设计原则
-
-- **只报告，不动手**：扫描器绝不修改/禁用任何插件，决策权永远在用户
-- **零依赖**：纯标准库，粘到任何环境都能跑
-- **不误报生命周期 hook**：`SessionStart`/`Stop` 等事件的 `*` matcher 是正常的，只标记工具事件
-- **规则库是活资产**：R1-R10 提炼自真实 GitHub issue，持续补充
-
-## 项目结构
+## Project Layout
 
 ```
 plugin-health-check/
-├── SKILL.md                        # skill 定义（触发条件 + 工作流）
+├── SKILL.md                       # agent skill definition (triggers + workflow)
 ├── scripts/
-│   └── plugin_health_check.py      # 核心扫描器（CLI + 可导入）
+│   └── plugin_health_check.py     # the scanner: CLI + importable
 ├── tests/
-│   └── run_tests.py                # 测试套件（自建 fixtures，23 项断言）
-└── README.md
+│   └── run_tests.py               # 23-assertion suite, self-built fixtures
+├── assets/                        # hero + demo SVGs
+└── README.md / README.zh-CN.md
 ```
 
-## 测试
+## Contributing
+
+The highest-value contribution is a **new rule**: if you hit a plugin-conflict incident in the wild that R1–R10 don't catch, open an issue with the failure mode — that's how this library grows.
 
 ```bash
-python tests/run_tests.py
-# passed: 23, failed: 0
+python tests/run_tests.py   # passed: 23, failed: 0
 ```
 
 ## License
 
-MIT
+[MIT](LICENSE) — audit freely, ship confidently.
