@@ -1,10 +1,12 @@
 {
   "name": "plugin-health-check",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "type": "module",
   "license": "MIT",
-  "engines": { "node": ">=22" },
+  "engines": {
+    "node": ">=22"
+  },
   "scripts": {
     "test": "node --test tests/dsh*.test.mjs",
     "check:dsh": "node scripts/dsh_health_check.mjs"
@@ -13,5 +15,6 @@
     "@deepseek-ai/cordis-plugin-include": "1.0.10",
     "js-yaml": "4.3.2",
     "semver": "7.8.5"
-  }
+  },
+  "description": "Read-only plugin health checks for DeepSeek Harness (DSH): profiles, bundles, patches, version compatibility and MCP conflicts."
 }

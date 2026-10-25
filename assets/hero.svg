@@ -22,13 +22,13 @@
   <text x="200" y="100" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="46"
         font-weight="700" fill="#f8fafc">plugin-health-check</text>
   <text x="202" y="140" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="19"
-        fill="#94a3b8">Audit your agent plugins before they audit you.</text>
+        fill="#94a3b8">Read-only checks for DeepSeek Harness.</text>
   <g font-family="Consolas, monospace" font-size="14">
     <rect x="202" y="158" width="120" height="26" rx="13" fill="#ef4444" fill-opacity="0.18" stroke="#ef4444" stroke-opacity="0.6"/>
-    <text x="222" y="176" fill="#fca5a5">R1 conflict</text>
+    <text x="222" y="176" fill="#fca5a5">DSH native</text>
     <rect x="334" y="158" width="150" height="26" rx="13" fill="#f59e0b" fill-opacity="0.18" stroke="#f59e0b" stroke-opacity="0.6"/>
-    <text x="354" y="176" fill="#fcd34d">R9 budget risk</text>
+    <text x="354" y="176" fill="#fcd34d">profile + patch</text>
     <rect x="496" y="158" width="138" height="26" rx="13" fill="#34d399" fill-opacity="0.15" stroke="#34d399" stroke-opacity="0.6"/>
-    <text x="516" y="176" fill="#6ee7b7">10 rules, 0 deps</text>
+    <text x="516" y="176" fill="#6ee7b7">read-only</text>
   </g>
 </svg>

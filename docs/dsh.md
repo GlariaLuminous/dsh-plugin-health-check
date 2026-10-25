@@ -12,7 +12,7 @@ node scripts/dsh_health_check.mjs --profile desktop --json
 node scripts/dsh_health_check.mjs --profile web --candidate /path/to/package --json
 ```
 
-Python 3.8+ users can run the collector through `python scripts/plugin_health_check.py --host dsh` with the same options. The original directory scanner remains Python-only and uses `--root`; combining `--root` with `--host dsh` is rejected.
+The optional Python 3.8+ launcher forwards the same DSH parameters: `python scripts/plugin_health_check.py --profile desktop --json`. Both entries require Node.js and the installed npm dependencies. DSH is the only supported host; host-selection and directory-scanning options are not available.
 
 | Option | Purpose |
 |---|---|
@@ -53,7 +53,7 @@ JSON includes `packages`, sanitized `entries`, `findings`, `fatal_count`, `statu
 
 `!!js` remains data, never evaluated. Expression-dependent entries, isolated/intercepted services, and unresolved module export maps make coverage incomplete. No candidate apply, install hook, MCP process or remote server starts.
 
-Runtime tools, commands and hooks, Agent presets/scopes, effective session permissions and dynamic MCP discovery require host runtime inspection. They are listed in `coverage.not_checked`. Plain Cordis groups share their enclosing static scope; service isolation is not guessed. The legacy 56-character-name, total 15000-token budget and `plugin.json.permissions` assumptions are not applied to DSH.
+Runtime tools, commands and hooks, Agent presets/scopes, effective session permissions and dynamic MCP discovery require host runtime inspection. They are listed in `coverage.not_checked`. Plain Cordis groups share their enclosing static scope; service isolation is not guessed.
 
 ## Install as a DSH skill
 
@@ -65,7 +65,6 @@ Invoke `/plugin-health-check` or ask the agent to audit a DSH profile. The skill
 
 ```sh
 npm test
-python tests/run_tests.py
 ```
 
 Tests construct temporary profiles/archives; a DSH installation is not required. They cover ordered overrides, disabled groups, exact exemptions, candidate updates, no-execution boundaries, sanitized failures, ASAR metadata, and native/Python CLI exit codes.

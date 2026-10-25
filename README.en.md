@@ -1,141 +1,95 @@
 <p align="center">
-  <img src="assets/hero.svg" width="860" alt="plugin-health-check — a shield with a checkmark; tagline: Audit your agent plugins before they audit you. Badges: R1 conflict, R9 budget risk, 10 rules 0 deps.">
+  <img src="assets/hero.svg" width="860" alt="plugin-health-check: DeepSeek Harness plugin checks">
 </p>
 
 <p align="center">
-  <strong>Plugin conflict auditor for agent ecosystems.</strong><br>
-  Pre-install checks and full audits for Claude Code / DSH / WorkBuddy-style plugins.
+  <strong>Check your DSH plugins before installing them.</strong><br>
+  Read-only profile and plugin checks for DeepSeek Harness
 </p>
 
 <p align="center">
-  <a href="#quick-start">Quick Start</a> •
-  <a href="#what-it-catches">Rules</a> •
-  <a href="#two-modes">Modes</a> •
-  <a href="#why-this-exists">Why</a> •
-  <a href="README.md">中文文档</a>
+  <a href="#quick-start">Quick start</a> ·
+  <a href="#checks">Checks</a> ·
+  <a href="docs/dsh.md">Reference</a> ·
+  <a href="README.md">中文</a>
 </p>
 
-<p align="center">
-  <a href="https://github.com/GlariaLuminous/plugin-health-check/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="License: MIT"></a>
-  <img src="https://img.shields.io/badge/python-3.8%2B-3776AB.svg?logo=python&logoColor=white" alt="Python 3.8+">
-  <img src="https://img.shields.io/badge/legacy_dependencies-0-brightgreen.svg" alt="Legacy mode has zero dependencies; DSH uses Node.js packages">
-  <img src="https://img.shields.io/badge/rules-10-8b5cf6.svg" alt="10 detection rules">
-  <img src="https://img.shields.io/badge/tests-DSH%20%2B%20legacy-brightgreen.svg" alt="DSH and legacy regression suites">
-</p>
+DSH plugin availability depends on selected bundles, ordered patches, package resolution and runtime compatibility. This tool follows **profile → bundle → patch → configuration entries** and reports both findings and inspection coverage.
 
----
+**DSH is the only supported host.** Audited plugins never execute and profile files remain unchanged. Requires Node.js 22+; verified against DSH Desktop 0.2.1-rc.2.
 
-**Everyone installs plugins on impulse. Nobody checks what conflicts with what — until something silently breaks.**
-
-Two MCP servers expose a tool with the same name, and *every request* starts failing with a 400. A plugin ships a malformed `.mcp.json`, and its servers are *silently ignored forever*. Two context-compression plugins both do their job, and together they *delete the context you needed*.
-
-The community's answer today is "disable half your plugins and bisect." This skill turns that into one command.
-
-## Native DSH mode
-
-Audit DSH profiles, selected bundles and effective patches. Requires Node.js 22+; the Python wrapper also requires Python 3.8+.
+## Quick start
 
 ```bash
 git clone https://github.com/GlariaLuminous/plugin-health-check.git
 cd plugin-health-check
 npm ci --ignore-scripts
-node scripts/dsh_health_check.mjs --profile desktop --json
-# Equivalent Python entry:
-python scripts/plugin_health_check.py --host dsh --profile desktop --json
+node scripts/dsh_health_check.mjs --profile desktop
 ```
-
-Supports scoped packages, Desktop ASAR installations, DSH engine/peer compatibility and exact exemptions, ordered Cordis patches, disabled groups, static includes, basic MCP configuration and local candidate comparisons. Add `--candidate /path/to/package` to compare an update without executing or installing it.
-
-Home defaults to `DSH_HOME` or `~/.dsh`. `--dsh-install` supplies an installation directory containing `node_modules`; `--dsh-version` supplies a runtime version when automatic detection is unavailable.
-
-Exit codes: **0** static checks passed, **1** fatal findings, **2** input/setup error, **3** incomplete. Reports expose resolved bundle counts and unknown coverage. Expressions and plugin code never execute. Runtime tools, commands, hooks, Agent presets, MCP discovery and effective session permissions remain uninspected. The legacy R2/R9/R10 assumptions below do not apply to DSH. See [DSH usage and scope](docs/dsh.md).
-
-## Quick Start
-
-The original directory scanner still works with Python 3.8+ and no third-party dependencies. The R1–R10 rules below describe this legacy mode; use the native entry above for DSH:
 
 ```bash
-git clone https://github.com/GlariaLuminous/plugin-health-check.git
-python plugin-health-check/scripts/plugin_health_check.py --root ~/.claude/plugins
+node scripts/dsh_health_check.mjs --profile web --json
+node scripts/dsh_health_check.mjs --dsh-home /path/to/.dsh --profile desktop
 ```
 
-Or install it as a skill so your agent runs the audit for you:
+Home defaults to `DSH_HOME` or `~/.dsh`. Standard Windows/macOS Desktop installations are detected, including packages inside ASAR. Custom installations can supply a directory containing DSH's `node_modules` through `--dsh-install`.
+
+The optional Python 3.8+ launcher forwards the same DSH arguments and still requires Node.js and the installed dependencies:
 
 ```bash
-cp -r plugin-health-check ~/.claude/skills/plugin-health-check
+python scripts/plugin_health_check.py --profile desktop --json
 ```
-
-Then just say: *"检查一下我的插件"* / *"audit my plugins"* — or, before installing something new: *"看看这个插件能不能装"*.
 
 <p align="center">
-  <img src="assets/demo.svg" width="860" alt="Terminal demo: scanning 8 plugins finds 1 fatal (R1 duplicate MCP server 'filesystem' shared by fs-mcp and file-tools), 1 high (R3 duplicate /review command), 2 medium. Verdict line: RESULT: FAIL - fix before relying on these plugins.">
+  <img src="assets/demo.svg" width="860" alt="Illustrative DSH output: duplicate MCP serverName in one scope, resulting in STATIC FAIL">
 </p>
 
-## Two Modes
+## Checks
 
-| You want to… | Run |
+| Area | Coverage |
 |---|---|
-| Audit everything installed | `python scripts/plugin_health_check.py --root <plugins_dir>` |
-| Check a plugin **before** installing it | `... --root <plugins_dir> --candidate <plugin_dir>` |
-| Get machine-readable output (CI gates) | `... --json` |
-| Also check upstream repos for staleness | `... --online` |
+| Profiles and bundles | Selected bundles, scoped packages, pnpm links and Desktop ASAR metadata |
+| Version admission | DSH engines, peer fallback, prereleases and exact-version exemptions |
+| Patches and includes | Official Cordis composition semantics, disabled/grouped entries, static includes and include cycles |
+| MCP configuration | Same known-scope serverName conflicts, naming rules and basic stdio/HTTP settings |
+| Candidate updates | Replace existing package identity, recompose and report new findings with baseline state |
+| Inspection coverage | Selected/resolved counts, dynamic expressions, unresolved modules and unknown service isolation |
 
-Exit codes: `0` clean · `1` fatal findings (gate your CI on it) · `2` usage error.
+## Before installation or update
 
-## What It Catches
-
-Ten rules, each distilled from a real, documented incident:
-
-| Rule | Severity | Catches | Real-world origin |
-|---|---|---|---|
-| **R1** | 🔴 fatal | Duplicate MCP server names across plugins | One silently overrides the other |
-| **R2** | 🟠 high | Tool names that collide after 64-char truncation | [openworker #746](https://github.com/andrewyng/openworker/issues/746) — 9 of 31 tools collided |
-| **R3** | 🟠 high | Two plugins claiming the same slash command | Undefined behavior on invoke |
-| **R4** | 🟡 medium | Wildcard `*` hooks on tool events; parallel hooks on one tool | Double side-effects, silent denys |
-| **R5** | 🟡 medium | Overlapping skill trigger words | Model loads the wrong skill — or both |
-| **R6** | 🟡 medium | Multiple plugins serving the same capability | Model indecision, repeated confirmation prompts |
-| **R7** | ⚪ low | Upstream repo untouched for 90+ days (`--online`) | Drift from platform changes |
-| **R8** | 🔴 fatal | Config format errors: missing `mcpServers` wrapper, broken JSON, missing SKILL.md | The Context7 silent-failure pattern |
-| **R9** | 🟠 high | Skill descriptions exceeding the prompt budget | Vercel plugin: 126 skills → 371 descriptions dropped |
-| **R10** | 🟣 security | `bypassPermissions` or wildcard allow-lists | Acts without ever asking you |
-
-## Design Principles
-
-- **Reports, never touches.** The scanner is read-only. It will not disable, move, or "fix" anything — you decide.
-- **Zero dependencies in legacy mode.** DSH mode uses the official Cordis patch algorithm and pinned YAML/SemVer packages.
-- **No false alarms on lifecycle hooks.** `*` matchers on `SessionStart`/`Stop` are legitimate — only tool events get flagged.
-- **The rule library is a living asset.** R1–R10 come from real GitHub issues. New incident patterns become new rules.
-
-## Honest Limitations
-
-- Static analysis only: it reads declared configs, so MCP tool-name collisions (R2) are caught when plugins declare their tools — runtime-discovered tools are out of scope.
-- R5's overlap detection is keyword-based heuristics, not embeddings. It trades a little noise for zero cost and zero network.
-- R7 requires `--online` and reads only public GitHub metadata.
-
-A tool that can say "you're fine" is one you can trust when it says you're not.
-
-## Project Layout
-
-```
-plugin-health-check/
-├── SKILL.md                       # agent skill definition (triggers + workflow)
-├── scripts/
-│   └── plugin_health_check.py     # the scanner: CLI + importable
-├── tests/
-│   └── run_tests.py               # 23-assertion suite, self-built fixtures
-├── assets/                        # hero + demo SVGs
-└── README.md (中文) / README.en.md (English)
-```
-
-## Contributing
-
-The highest-value contribution is a **new rule**: if you hit a plugin-conflict incident in the wild that R1–R10 don't catch, open an issue with the failure mode — that's how this library grows.
+Pass a local source or unpacked package directory:
 
 ```bash
-python tests/run_tests.py   # passed: 23, failed: 0
-npm test                   # DSH regression suite
+node scripts/dsh_health_check.mjs --profile desktop --candidate /path/to/plugin --json
 ```
 
-## License
+The candidate is never installed and its build scripts/apply function never run. A matching package replaces the installed identity. A failing or incomplete baseline prevents a clean candidate verdict.
 
-[MIT](LICENSE) — audit freely, ship confidently.
+## Results
+
+| Exit | Status | Meaning |
+|---|---|---|
+| `0` | `pass` | Covered static checks passed |
+| `1` | `fail` | Fatal findings |
+| `2` | `error` | Input or setup error |
+| `3` | `incomplete` | Inspection requires more information or runtime verification |
+
+JSON exposes packages, sanitized entries, findings, coverage, status and exit code. Config bodies, credentials and YAML error excerpts are excluded; installation paths remain for diagnosis.
+
+This is static inspection. Runtime tools, commands/hooks, Agent presets, MCP connectivity/discovery and effective session permissions are not verified. JavaScript expressions remain unevaluated. A static pass does not assert successful plugin activation.
+
+## Use as a DSH skill
+
+Place the complete repository under `$DSH_HOME/skills/plugin-health-check/` or `<project-root>/.dsh/skills/plugin-health-check/` and run `npm ci --ignore-scripts` there. Keep `SKILL.md` beside `scripts/`, then invoke `/plugin-health-check` or ask the agent to check a DSH profile.
+
+See the [DSH reference](docs/dsh.md) for options and limitations. The CLI now targets DSH directly; `--host`, `--root`, `--online` and `--desc-budget` have been removed.
+
+## Development
+
+```bash
+npm test
+```
+
+Tests construct temporary profiles and ASAR files, with no DSH installation required. Python launcher tests also require Python 3.8+. Contributions should include a minimal DSH fixture, host version and expected behavior; remove credentials and personal paths before sharing.
+
+[MIT](LICENSE)

@@ -29,16 +29,30 @@ test('CLI setup errors do not echo malformed manifest secrets', t => {
   assert.ok(!(result.stdout + result.stderr).includes('DO_NOT_LEAK'));
 });
 
-test('Python DSH entry forwards native output and exit status', t => {
-  const result = spawnSync(process.env.PYTHON || 'python', ['scripts/plugin_health_check.py', '--host', 'dsh',
-    '--dsh-home', home(t), '--dsh-version', '0.2.1-rc.2', '--json'], { encoding: 'utf8' });
+test('Python entry defaults to DSH and forwards native output and exit status', t => {
+  const dir = home(t);
+  const result = spawnSync(process.env.PYTHON || 'python', ['scripts/plugin_health_check.py',
+    '--dsh-home', dir, '--dsh-version', '0.2.1-rc.2', '--json'], {
+    encoding: 'utf8', env: { ...process.env, USERPROFILE: dir, HOME: dir },
+  });
   assert.equal(result.status, 3, result.stderr);
   assert.equal(JSON.parse(result.stdout).host, 'dsh');
 });
 
-test('DSH entry rejects a legacy --root rather than silently scanning a different directory', t => {
-  const result = spawnSync(process.env.PYTHON || 'python', ['scripts/plugin_health_check.py', '--host', 'dsh',
-    '--root', home(t), '--json'], { encoding: 'utf8' });
-  assert.equal(result.status, 2);
-  assert.match(result.stderr, /--root/);
+test('removed directory and host-selection options cannot dispatch another scanner', t => {
+  for (const args of [['--root', home(t)], ['--online'], ['--desc-budget', '100'], ['--host', 'other']]) {
+    const result = spawnSync(process.env.PYTHON || 'python', ['scripts/plugin_health_check.py', ...args, '--json'], {
+      encoding: 'utf8',
+    });
+    assert.equal(result.status, 2);
+    assert.equal(JSON.parse(result.stdout).host, 'dsh');
+  }
+});
+
+test('Python help exposes only the native DSH interface', () => {
+  const result = spawnSync(process.env.PYTHON || 'python', ['scripts/plugin_health_check.py', '--help'], { encoding: 'utf8' });
+  assert.equal(result.status, 0);
+  assert.match(result.stdout, /DSH static profile check/);
+  assert.ok(!result.stdout.includes('--root'));
+  assert.ok(!result.stdout.includes('--host'));
 });

@@ -1,45 +1,26 @@
-<svg width="860" height="470" viewBox="0 0 860 470" xmlns="http://www.w3.org/2000/svg">
+<svg width="860" height="360" viewBox="0 0 860 360" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title description">
+  <title id="title">DSH plugin health check</title>
+  <desc id="description">Illustrative output: two bundles resolve, but duplicate MCP serverName in the same scope causes a static failure.</desc>
   <defs>
     <linearGradient id="termbg" x1="0" y1="0" x2="0" y2="1">
       <stop offset="0" stop-color="#0d1117"/>
       <stop offset="1" stop-color="#161b22"/>
     </linearGradient>
   </defs>
-  <rect width="860" height="470" rx="12" fill="url(#termbg)" stroke="#30363d"/>
-  <!-- title bar -->
+  <rect x="1" y="1" width="858" height="358" rx="12" fill="url(#termbg)" stroke="#30363d"/>
   <circle cx="30" cy="28" r="7" fill="#ff5f57"/>
   <circle cx="54" cy="28" r="7" fill="#febc2e"/>
   <circle cx="78" cy="28" r="7" fill="#28c840"/>
-  <text x="430" y="33" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="13" fill="#8b949e">plugin-health-check — audit</text>
-  <g font-family="Consolas, Menlo, monospace" font-size="15">
-    <text x="28" y="72" fill="#58a6ff">$ python scripts/plugin_health_check.py --root ~/.claude/plugins</text>
-    <text x="28" y="108" fill="#c9d1d9" font-weight="bold">plugin-health-check report</text>
-    <text x="28" y="132" fill="#8b949e">root: /home/dev/.claude/plugins</text>
-    <text x="28" y="156" fill="#8b949e">plugins scanned: 8</text>
-    <text x="28" y="188" fill="#c9d1d9">findings: </text>
-    <text x="118" y="188" fill="#f85149">fatal: 1</text>
-    <text x="196" y="188" fill="#8b949e">, </text>
-    <text x="206" y="188" fill="#d29922">high: 1</text>
-    <text x="270" y="188" fill="#8b949e">, </text>
-    <text x="280" y="188" fill="#e3b341">medium: 2</text>
-
-    <text x="28" y="224" fill="#f85149" font-weight="bold">[FATAL]</text>
-    <text x="96" y="224" fill="#8b949e">(R1)</text>
-    <text x="140" y="224" fill="#c9d1d9">MCP server 'filesystem' defined by multiple plugins:</text>
-    <text x="140" y="248" fill="#c9d1d9">fs-mcp, file-tools - one will silently override the other</text>
-    <text x="66" y="272" fill="#7ee787">-&gt; rename the server in one plugin or disable one of them</text>
-
-    <text x="28" y="308" fill="#d29922" font-weight="bold">[HIGH]</text>
-    <text x="88" y="308" fill="#8b949e">(R3)</text>
-    <text x="132" y="308" fill="#c9d1d9">slash command '/review' claimed by multiple plugins:</text>
-    <text x="132" y="332" fill="#c9d1d9">code-review, pr-helper - behavior is undefined</text>
-
-    <text x="28" y="368" fill="#e3b341" font-weight="bold">[MEDIUM]</text>
-    <text x="102" y="368" fill="#8b949e">(R6)</text>
-    <text x="146" y="368" fill="#c9d1d9">category 'browser' is served by multiple plugins:</text>
-    <text x="146" y="392" fill="#c9d1d9">playwright-mcp, browser-tools - model indecision risk</text>
-
-    <rect x="20" y="414" width="340" height="34" rx="6" fill="#f85149" fill-opacity="0.12" stroke="#f85149" stroke-opacity="0.5"/>
-    <text x="36" y="436" fill="#ffa198" font-weight="bold">RESULT: FAIL - 1 fatal issue, fix before relying on these plugins</text>
+  <text x="430" y="33" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="13" fill="#8b949e">DSH profile check — illustrative output</text>
+  <g font-family="Consolas, Menlo, monospace" font-size="14">
+    <text x="28" y="76" fill="#58a6ff">$ node scripts/dsh_health_check.mjs --profile desktop</text>
+    <text x="28" y="114" fill="#c9d1d9">DSH static profile check: desktop (runtime 0.2.1-rc.2)</text>
+    <text x="28" y="140" fill="#8b949e">Bundles: 2/2 resolved; entries: 2</text>
+    <text x="28" y="182" fill="#f85149" font-weight="bold">[FATAL] (R1)</text>
+    <text x="28" y="208" fill="#c9d1d9">MCP serverName 'filesystem' is registered more than once</text>
+    <text x="28" y="232" fill="#c9d1d9">in the same scope</text>
+    <rect x="20" y="258" width="270" height="34" rx="6" fill="#f85149" fill-opacity="0.12" stroke="#f85149" stroke-opacity="0.5"/>
+    <text x="36" y="280" fill="#ffa198" font-weight="bold">RESULT: STATIC FAIL</text>
+    <text x="28" y="328" fill="#8b949e" font-size="12">Runtime activation, presets, tool discovery and session permissions are not inspected.</text>
   </g>
 </svg>
