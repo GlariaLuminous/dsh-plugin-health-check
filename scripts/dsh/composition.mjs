@@ -21,7 +21,7 @@ function validate(rows, patch, file, ancestors = new Set()) {
       if (Object.hasOwn(row, key) && typeof row[key] !== 'string' && !dynamic(row[key])) throw new Error(`${key} must be a string`);
     }
     for (const key of ['disabled', 'group']) {
-      if (Object.hasOwn(row, key) && typeof row[key] !== 'boolean' && !dynamic(row[key])) throw new Error(`${key} must be boolean`);
+      if (Object.hasOwn(row, key) && row[key] !== null && typeof row[key] !== 'boolean' && !dynamic(row[key])) throw new Error(`${key} must be boolean or null`);
     }
     if (row.insert !== undefined) {
       if (!patch) throw new Error('insert belongs in a patch list');

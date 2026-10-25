@@ -123,3 +123,26 @@ test('static include cycles fail and a disabled include never reads its missing 
   f.bundle('@demo/a', [{ id: 'include', name: 'cordis:include', disabled: true, config: { path: './missing.yml' } }]);
   assert.equal(auditDsh(f.options).status, 'pass');
 });
+
+test('valid nullable entry flags are accepted; service-isolated registrations remain unknown', t => {
+  const f = fixture(t);
+  f.bundle('@demo/a', [{ id: 'a', name: '@demo/a', disabled: null, group: null }]);
+  assert.equal(auditDsh(f.options).status, 'pass');
+  f.bundle('@deepseek-ai/dsh-mcp-client', []);
+  f.bundle('@demo/a', ['one', 'two'].map(id => ({ id, name: '@deepseek-ai/dsh-mcp-client',
+    isolate: { tools: true }, config: { serverName: 'same', transport: 'stdio', command: 'x' } })));
+  const result = auditDsh(f.options);
+  assert.equal(result.status, 'incomplete');
+  assert.ok(!result.findings.some(v => v.rule === 'R1'));
+});
+
+test('a candidate repairs an unresolved selected package without duplicating it', t => {
+  const f = fixture(t, ['@demo/missing']);
+  const candidate = f.bundle('@demo/missing', []);
+  // The candidate is supplied under a different path from the installation lookup.
+  const other = join(f.home, 'new-package');
+  f.write(join(other, 'package.json'), { name: '@demo/missing', version: '1.0.0', dsh: { bundle: { patch: 'patch.yml' } } });
+  f.write(join(other, 'patch.yml'), []);
+  rmSync(candidate, { recursive: true, force: true });
+  assert.equal(auditDsh({ ...f.options, candidate: other }).coverage.selected_bundles, 1);
+});

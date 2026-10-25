@@ -18,9 +18,9 @@
 <p align="center">
   <a href="https://github.com/GlariaLuminous/plugin-health-check/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="License: MIT"></a>
   <img src="https://img.shields.io/badge/python-3.8%2B-3776AB.svg?logo=python&logoColor=white" alt="Python 3.8+">
-  <img src="https://img.shields.io/badge/dependencies-0-brightgreen.svg" alt="Zero dependencies">
+  <img src="https://img.shields.io/badge/legacy_dependencies-0-brightgreen.svg" alt="Legacy mode has zero dependencies; DSH uses Node.js packages">
   <img src="https://img.shields.io/badge/rules-10-8b5cf6.svg" alt="10 detection rules">
-  <img src="https://img.shields.io/badge/tests-23%20passing-brightgreen.svg" alt="23 tests passing">
+  <img src="https://img.shields.io/badge/tests-DSH%20%2B%20legacy-brightgreen.svg" alt="DSH and legacy regression suites">
 </p>
 
 ---
@@ -31,9 +31,28 @@ Two MCP servers expose a tool with the same name, and *every request* starts fai
 
 The community's answer today is "disable half your plugins and bisect." This skill turns that into one command.
 
+## Native DSH mode
+
+Audit DSH profiles, selected bundles and effective patches. Requires Node.js 22+; the Python wrapper also requires Python 3.8+.
+
+```bash
+git clone https://github.com/GlariaLuminous/plugin-health-check.git
+cd plugin-health-check
+npm ci --ignore-scripts
+node scripts/dsh_health_check.mjs --profile desktop --json
+# Equivalent Python entry:
+python scripts/plugin_health_check.py --host dsh --profile desktop --json
+```
+
+Supports scoped packages, Desktop ASAR installations, DSH engine/peer compatibility and exact exemptions, ordered Cordis patches, disabled groups, static includes, basic MCP configuration and local candidate comparisons. Add `--candidate /path/to/package` to compare an update without executing or installing it.
+
+Home defaults to `DSH_HOME` or `~/.dsh`. `--dsh-install` supplies an installation directory containing `node_modules`; `--dsh-version` supplies a runtime version when automatic detection is unavailable.
+
+Exit codes: **0** static checks passed, **1** fatal findings, **2** input/setup error, **3** incomplete. Reports expose resolved bundle counts and unknown coverage. Expressions and plugin code never execute. Runtime tools, commands, hooks, Agent presets, MCP discovery and effective session permissions remain uninspected. The legacy R2/R9/R10 assumptions below do not apply to DSH. See [DSH usage and scope](docs/dsh.md).
+
 ## Quick Start
 
-Works as a standalone CLI — no agent, no install, no dependencies beyond Python 3.8+:
+The original directory scanner still works with Python 3.8+ and no third-party dependencies. The R1–R10 rules below describe this legacy mode; use the native entry above for DSH:
 
 ```bash
 git clone https://github.com/GlariaLuminous/plugin-health-check.git
@@ -83,7 +102,7 @@ Ten rules, each distilled from a real, documented incident:
 ## Design Principles
 
 - **Reports, never touches.** The scanner is read-only. It will not disable, move, or "fix" anything — you decide.
-- **Zero dependencies.** Pure stdlib. Paste it anywhere, it runs.
+- **Zero dependencies in legacy mode.** DSH mode uses the official Cordis patch algorithm and pinned YAML/SemVer packages.
 - **No false alarms on lifecycle hooks.** `*` matchers on `SessionStart`/`Stop` are legitimate — only tool events get flagged.
 - **The rule library is a living asset.** R1–R10 come from real GitHub issues. New incident patterns become new rules.
 
@@ -114,6 +133,7 @@ The highest-value contribution is a **new rule**: if you hit a plugin-conflict i
 
 ```bash
 python tests/run_tests.py   # passed: 23, failed: 0
+npm test                   # DSH regression suite
 ```
 
 ## License

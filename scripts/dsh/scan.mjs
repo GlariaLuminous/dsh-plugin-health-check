@@ -73,6 +73,7 @@ function snapshot(options) {
   const replacements = new Set();
   if (candidate) {
     for (const id of bundleNames) {
+      if (id === candidate.manifest.name) { replacements.add(id); continue; }
       try { if (reader.bundle(id).manifest.name === candidate.manifest.name) replacements.add(id); }
       catch { /* Unresolved entries are reported in the bundle loop. */ }
     }
@@ -140,6 +141,11 @@ function snapshot(options) {
       const record = { id: row.id ?? null, name: row.name ?? null, disabled: inactive, scope, source };
       entries.push(record);
       if (inactive) continue;
+      if (row.isolate != null || row.intercept != null) {
+        record.scope = 'unknown';
+        unknown('service isolation/interception requires runtime scope inspection', source);
+        continue;
+      }
       const key = `${scope}\0${row.id}`;
       if (row.id && rowIds.has(key)) add('DSH_PATCH', 'high', 'duplicate entry id makes patch addressing ambiguous', owner ? [owner] : [], source);
       rowIds.add(key);
@@ -191,7 +197,7 @@ function snapshot(options) {
           catch { add('R8', 'fatal', 'remote MCP requires an absolute HTTP(S) URL', [], source); }
         }
         const identity = `${scope}\0${server}`;
-        if (servers.has(identity)) add('R1', 'fatal', 'MCP serverName is registered more than once in the same scope',
+        if (servers.has(identity)) add('R1', 'fatal', `MCP serverName '${server}' is registered more than once in the same scope`,
           [...new Set([servers.get(identity), owner].filter(Boolean))], source);
         else servers.set(identity, owner);
       }

@@ -1,69 +1,73 @@
 ---
 name: plugin-health-check
-description: Audit installed agent plugins for conflicts and defects, and pre-check a plugin before installing it. Use when the user wants to install a new plugin ("install plugin X", "帮我装这个插件"), asks to check/audit/clean up installed plugins ("检查我的插件", "插件冲突", "插件体检"), or experiences weird agent behavior after installing plugins (repeated confirmation prompts, wrong skill loading, commands not working, MCP tools failing).
+description: Check DSH (DeepSeek Harness) profiles and native plugins for invalid bundle configuration, runtime version incompatibility, patch problems and MCP server conflicts. Use for "检查我的 DSH 插件", "DSH 插件冲突", "插件体检", or checking a local plugin before installation. Also supports the original plugin-directory scanner.
 ---
 
 # Plugin Health Check
 
-Users install plugins impulsively and pay the price later: silent conflicts,
-duplicated capabilities, broken configs, bloated context. This skill turns the
-community's manual "disable half and bisect" debugging into an automated audit.
+Run from this skill's base directory, or use absolute paths to its scripts. Do not assume the user's working directory contains scripts/.
 
-## Two modes
+## DSH audit
 
-### Mode A: Full audit (default)
-
-Run when the user asks to check their installed plugins:
+1. Identify the intended profile: desktop for the desktop application, web for the web launcher. Do not combine them as one running environment.
+2. Check Node.js 22+ and repository dependencies. Setup is `npm ci --ignore-scripts` in the skill base directory. This installs checker dependencies, not audited plugins.
+3. Run:
 
 ```bash
-python scripts/plugin_health_check.py --root <plugins_root>
+node scripts/dsh_health_check.mjs --profile desktop --json
 ```
 
-- Default root is `~/.claude/plugins`; for WorkBuddy/DSH ask the user or use
-  the host's plugin directory if known.
-- Add `--online` to also check upstream repos for staleness (needs network).
-- Add `--json` for machine-readable output.
+Equivalent Python entry: `python scripts/plugin_health_check.py --host dsh --profile desktop --json`.
 
-### Mode B: Pre-install check
+- Home defaults to DSH_HOME or ~/.dsh; use `--dsh-home DIR` for another location.
+- If built-in packages cannot resolve, use `--dsh-install DIR` with the installation containing node_modules. Standard Windows/macOS Desktop installations, including ASAR, are detected.
+- Use `--dsh-version VERSION` only when the actual runtime version is known. Never guess a version to make compatibility pass.
+- `--patch FILE` adds an invocation overlay and is repeatable.
 
-Run when the user is about to install a new plugin. Obtain the plugin source
-first (clone/download it to a temp dir), then:
+## Before installing or updating a local DSH plugin
+
+Obtain source without executing install/build scripts, then:
 
 ```bash
-python scripts/plugin_health_check.py --root <plugins_root> --candidate <plugin_dir>
+node scripts/dsh_health_check.mjs --profile desktop --candidate /path/to/package --json
 ```
 
-Only findings involving the candidate are reported. Present them as:
-**safe to install / install with caution / do not install**, with reasons.
+Candidates replace matching package identity or join the selected set. The report includes new findings and baseline status. An unhealthy baseline cannot produce a clean candidate verdict.
 
-## Interpreting findings
+## Interpret the report
 
-| Rule | Severity | Meaning |
-|------|----------|---------|
-| R1 | fatal | Two plugins define the same MCP server name — one silently wins |
-| R2 | high | Tool name too long — truncation causes unknown-tool failures |
-| R3 | high | Two plugins claim the same slash command |
-| R4 | medium | Hook matcher too wide, or multiple plugins hook the same tool |
-| R5 | medium | Skill descriptions overlap — model loads wrong/duplicate skills |
-| R6 | medium | Multiple plugins serve the same capability — model indecision |
-| R7 | low | Plugin not updated in 90+ days |
-| R8 | fatal | Config format error — plugin is silently (partially) broken |
-| R9 | high | Skill descriptions exceed token budget — descriptions get dropped |
-| R10 | security | Plugin requests bypassPermissions or wildcard allow-list |
+| Exit | Meaning | User-facing result |
+|---|---|---|
+| 0 | Covered static checks passed | No problems found in covered configuration checks |
+| 1 | Fatal findings | Explain the blocking package/config and a concrete next step |
+| 2 | Input/setup error | Correct profile, paths, dependencies or version and rerun |
+| 3 | Incomplete inspection | Show missing coverage and what information is needed |
 
-Severity guide for the final answer to the user:
+Include coverage.resolved_bundles / coverage.selected_bundles, runtime version and profile. Selected and disabled describe configuration, not successful runtime activation.
 
-- **fatal / security** findings → tell the user explicitly what breaks or what
-  trust is required; recommend disabling or fixing before continuing.
-- **high** → recommend action, explain the concrete failure it prevents.
-- **medium / low** → list as suggestions; do not alarm.
+- DSH_VERSION: malformed/incompatible engine or DSH peer requirement. Exact-version exemptions remain security findings.
+- DSH_PACKAGE: unresolved bundle/module, missing bundle declaration or unreadable entry.
+- DSH_PATCH: invalid patch/include, cycle, ambiguous addressing or unmatched override.
+- R1: static same-scope MCP serverName conflict; DSH refuses duplicate registration.
+- R8: invalid basic MCP server/transport configuration.
+- DSH_COVERAGE: dynamic expressions, isolated services or unresolved metadata were not evaluated.
 
-## Workflow rules
+Runtime tools/commands/hooks, Agent preset activation, MCP connections/discovery and effective session policies are not inspected. Do not apply legacy long-name collision, total skill-description budget or manifest permission assumptions to DSH. Never call a static pass "safe to install" or full runtime validation.
 
-1. Never modify, move, or disable plugins yourself. Report only; the user decides.
-2. If `--root` has no plugins, say so and ask for the correct directory instead
-   of guessing common paths repeatedly.
-3. After the report, offer one concrete next step per fatal/high finding
-   (e.g. "disable plugin Y to resolve R1") but wait for confirmation.
-4. Keep the user-facing summary short: counts by severity, then the top
-   findings. Point to the full report for details.
+## Original directory mode
+
+For an explicitly requested legacy directory scan:
+
+```bash
+python scripts/plugin_health_check.py --root /path/to/plugins --json
+python scripts/plugin_health_check.py --root /path/to/plugins --candidate /path/to/plugin --json
+```
+
+This retains the original R1-R10 rules and Python-only dependencies. --online is available only here. Do not use a DSH profile as --root.
+
+## Workflow
+
+- Report only. Do not modify, move, disable or install audited plugins.
+- Inspect the declared profile first. An empty result is incomplete, not proof of health.
+- Give one concrete next step for each fatal finding; configuration changes remain the user's decision.
+- Keep the summary short and preserve runtime limitations.

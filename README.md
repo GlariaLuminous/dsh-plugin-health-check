@@ -8,7 +8,8 @@
 </p>
 
 <p align="center">
-  <a href="#快速上手">快速上手</a> •
+  <a href="#dsh-原生模式">DSH 原生模式</a> •
+  <a href="#快速上手">目录模式</a> •
   <a href="#能查出什么">十条规则</a> •
   <a href="#两种用法">用法</a> •
   <a href="#老实交代">局限</a> •
@@ -18,9 +19,9 @@
 <p align="center">
   <a href="https://github.com/GlariaLuminous/plugin-health-check/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="License: MIT"></a>
   <img src="https://img.shields.io/badge/python-3.8%2B-3776AB.svg?logo=python&logoColor=white" alt="Python 3.8+">
-  <img src="https://img.shields.io/badge/dependencies-0-brightgreen.svg" alt="零依赖">
+  <img src="https://img.shields.io/badge/legacy_dependencies-0-brightgreen.svg" alt="目录模式零依赖；DSH 模式需要 Node.js 和 npm 依赖">
   <img src="https://img.shields.io/badge/rules-10-8b5cf6.svg" alt="10 条规则">
-  <img src="https://img.shields.io/badge/tests-23%20passing-brightgreen.svg" alt="23 项测试通过">
+  <img src="https://img.shields.io/badge/tests-DSH%20%2B%20legacy-brightgreen.svg" alt="DSH 和目录模式回归测试">
 </p>
 
 ---
@@ -36,9 +37,44 @@
 
 现在社区的标准解法是"禁用一半插件，二分排查"。这个工具把这件事变成一条命令。
 
+## DSH 原生模式
+
+按 DSH 的 **profile → bundle → patch** 检查原生插件。已在 DSH Desktop `0.2.1-rc.2` 做只读验证。
+
+需要 Node.js 22+；Python 入口另需 Python 3.8+。在仓库根目录安装固定版本依赖：
+
+```bash
+git clone https://github.com/GlariaLuminous/plugin-health-check.git
+cd plugin-health-check
+npm ci --ignore-scripts
+node scripts/dsh_health_check.mjs --profile desktop
+```
+
+也可以沿用 Python 入口：
+
+```bash
+python scripts/plugin_health_check.py --host dsh --profile desktop --json
+python scripts/plugin_health_check.py --host dsh --profile web --candidate /path/to/plugin
+```
+
+默认读取 `$DSH_HOME` 或 `~/.dsh`。可用 `--dsh-home` 指定位置；宿主安装不在默认路径时，传入 `--dsh-install`，指向含 `node_modules` 的 DSH 安装目录。`--dsh-version` 可补充无法自动发现的运行时版本。
+
+| 检查 | 行为 |
+|---|---|
+| profile 与原生 bundle | 只检查选中的 bundle，支持 scoped 包及 Desktop ASAR 内置包 |
+| DSH 版本兼容 | `engines.dsh` 优先、DSH peers 回退、预发布范围与精确版本豁免 |
+| patch 与 include | 使用官方 Cordis 合并算法；支持 bundle/profile/home/`--patch` 层、disabled、分组与静态 include |
+| MCP 配置 | 检查静态同作用域的 serverName 重复、名称格式和基本 transport 配置 |
+| 候选更新 | 按包身份替换旧版本，重算配置，仅报告新增发现并保留 baseline 状态 |
+| 不完整检查 | 动态表达式、服务隔离或未解析入口显示覆盖不足；不执行插件代码或 `!!js` |
+
+退出码：`0` 静态检查通过 · `1` 致命发现 · `2` 参数/环境错误 · `3` 检查不完整。
+
+**静态通过不代表运行时已验证。** 运行期工具、命令、hook、Agent preset、MCP 连接和有效会话权限不在本版覆盖范围。DSH 模式不会套用下方目录模式的工具名截断、总描述预算或权限字段假设。详细参数和 skill 安装方式见 [DSH 使用说明](docs/dsh.md)。
+
 ## 快速上手
 
-它就是个独立的命令行脚本，不挑环境，Python 3.8+ 就行，没有任何第三方依赖：
+原有目录模式是独立 Python 脚本，Python 3.8+ 即可，无第三方依赖。下面的 R1–R10 适用于该模式；DSH 请使用上面的原生入口：
 
 ```bash
 git clone https://github.com/GlariaLuminous/plugin-health-check.git
@@ -90,7 +126,7 @@ cp -r plugin-health-check ~/.claude/skills/plugin-health-check
 ## 设计原则
 
 - **只报告，不动手。** 扫描器是只读的，不会替你禁用、删除、"修复"任何东西——决定权在你。
-- **零依赖。** 纯标准库，拷到哪都能跑。
+- **目录模式零依赖。** 原有 Python 扫描器保持纯标准库；DSH 模式使用官方 Cordis patch 算法和固定版本的 YAML/SemVer 依赖。
 - **不乱报警。** `SessionStart`、`Stop` 这类生命周期事件的 `*` matcher 是正常写法，只有工具事件（`PreToolUse` 之类）的通配符才会被标记。
 - **规则库是活的。** R1-R10 都是从真实 GitHub issue 里提炼的。你在野外踩到新的冲突模式，提个 issue，它就变成下一条规则。
 
@@ -121,6 +157,7 @@ plugin-health-check/
 
 ```bash
 python tests/run_tests.py   # passed: 23, failed: 0
+npm test                   # DSH 配置、CLI、ASAR 和候选模式回归测试
 ```
 
 ## License

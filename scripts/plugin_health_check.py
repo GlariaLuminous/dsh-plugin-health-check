@@ -483,7 +483,7 @@ def format_report(findings, plugins, root):
 def main(argv=None):
     ap = argparse.ArgumentParser(
         description="Scan installed agent plugins for conflicts and defects.")
-    ap.add_argument("--root", default=os.path.expanduser("~/.claude/plugins"),
+    ap.add_argument("--root", default=None,
                     help="plugins root dir, or a single plugin dir "
                          "(default: ~/.claude/plugins)")
     ap.add_argument("--json", action="store_true", help="emit JSON report")
@@ -504,6 +504,9 @@ def main(argv=None):
     args = ap.parse_args(argv)
 
     if args.host == "dsh":
+        if args.root is not None:
+            print("error: --root is for legacy scans; use --dsh-home and --profile for DSH", file=sys.stderr)
+            return 2
         if args.online:
             print("error: --online is only supported by the legacy directory scanner", file=sys.stderr)
             return 2
@@ -524,7 +527,7 @@ def main(argv=None):
             print("error: DSH mode requires Node.js 22+; run npm ci --ignore-scripts first", file=sys.stderr)
             return 2
 
-    root = os.path.abspath(args.root)
+    root = os.path.abspath(args.root or os.path.expanduser("~/.claude/plugins"))
     if not os.path.isdir(root):
         print("error: not a directory: %s" % root, file=sys.stderr)
         return 2
