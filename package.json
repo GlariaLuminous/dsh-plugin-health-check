@@ -1,0 +1,17 @@
+{
+  "name": "plugin-health-check",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "license": "MIT",
+  "engines": { "node": ">=22" },
+  "scripts": {
+    "test": "node --test tests/dsh*.test.mjs",
+    "check:dsh": "node scripts/dsh_health_check.mjs"
+  },
+  "dependencies": {
+    "@deepseek-ai/cordis-plugin-include": "1.0.10",
+    "js-yaml": "4.3.2",
+    "semver": "7.8.5"
+  }
+}
