@@ -55,6 +55,22 @@ JSON includes `packages`, sanitized `entries`, `findings`, `fatal_count`, `statu
 
 Runtime tools, commands and hooks, Agent presets/scopes, effective session permissions and dynamic MCP discovery require host runtime inspection. They are listed in `coverage.not_checked`. Plain Cordis groups share their enclosing static scope; service isolation is not guessed.
 
+## Install as a DSH plugin
+
+```sh
+dsh plugin --profile web add github:GlariaLuminous/plugin-health-check
+```
+
+The package declares `dsh.bundle.patch`, so `dsh plugin` appends it to the profile's `dsh.profile.bundles`; restart DSH afterwards. Its patch inserts one entry, which registers the read-only `plugin_health_check` tool. Plugins run with Harness's local permissions, so install only sources you trust.
+
+| Argument | Meaning |
+|---|---|
+| `profile` | Profile under `$DSH_HOME/profiles`; defaults to `web` |
+| `candidate` | Local package directory to check before installing it |
+| `dshVersion` | Explicit runtime version, only when known |
+
+The tool returns `status`, `exit_code`, a readable `summary` and the compact JSON `report` (the CLI's report without the per-entry list). It uses the same scanner as the CLI, so coverage limits are identical. Scanner errors are replaced by a generic message, because parse errors can quote credentials. `@deepseek-ai/dsh-tools` is an optional peer: the CLI and skill work without it, the plugin entry needs the host to provide it.
+
 ## Install as a DSH skill
 
 Place the complete repository at `$DSH_HOME/skills/plugin-health-check/` or `<project-root>/.dsh/skills/plugin-health-check/`, then run `npm ci --ignore-scripts` there. Keep `scripts/` beside `SKILL.md`. Cloning into an arbitrary directory does not register the skill.
