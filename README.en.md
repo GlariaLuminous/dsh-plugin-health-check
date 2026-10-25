@@ -8,6 +8,7 @@
 </p>
 
 <p align="center">
+  <a href="#install-as-a-dsh-plugin">Install</a> ·
   <a href="#quick-start">Quick start</a> ·
   <a href="#checks">Checks</a> ·
   <a href="docs/dsh.md">Reference</a> ·
@@ -17,6 +18,24 @@
 DSH plugin availability depends on selected bundles, ordered patches, package resolution and runtime compatibility. This tool follows **profile → bundle → patch → configuration entries** and reports both findings and inspection coverage.
 
 **DSH is the only supported host.** Audited plugins never execute and profile files remain unchanged. Requires Node.js 22+; verified against DSH Desktop 0.2.1-rc.2.
+
+## Install as a DSH plugin
+
+One command adds it to a profile; after a restart the agent has a read-only `plugin_health_check` tool:
+
+```bash
+dsh plugin --profile web add github:GlariaLuminous/plugin-health-check
+```
+
+Then ask the agent to "check my DSH plugins", or "will /path/to/plugin conflict with what I have?"; it passes the folder as `candidate`. The tool only reads files: it starts no plugin, runs no command and changes no configuration.
+
+> **Status: experimental.** The check engine (CLI) is verified on DSH Desktop 0.2.1-rc.2. The agent-tool entry is new: its registration is covered by host-independent tests, but it has not yet been used in a real DSH session. Please file an issue with your DSH version if something is off. DSH is a developer preview, so re-check after upgrades.
+
+Without installing into a profile, use the CLI directly:
+
+```bash
+npx dsh-plugin-health-check --profile web
+```
 
 ## Quick start
 

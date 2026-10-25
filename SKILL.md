@@ -7,6 +7,8 @@ description: Check DeepSeek Harness (DSH) profiles and plugins for invalid bundl
 
 This skill supports DeepSeek Harness only. Run from the skill's base directory or use absolute paths to its scripts.
 
+If a `plugin_health_check` tool is available (the package is installed as a DSH plugin), call it instead of running the script: pass `profile` (`web` or `desktop`) and, for a plugin not yet installed, `candidate`. It returns the same status, exit code and coverage limits described below.
+
 ## Audit a profile
 
 1. Identify the intended profile: desktop for the desktop application, web for the web launcher. Do not combine them as one running environment.

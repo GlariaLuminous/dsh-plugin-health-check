@@ -16,6 +16,7 @@
 </p>
 
 <p align="center">
+  <a href="https://github.com/GlariaLuminous/plugin-health-check/actions/workflows/ci.yml"><img src="https://github.com/GlariaLuminous/plugin-health-check/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
   <img src="https://img.shields.io/badge/Node.js-22%2B-43853d.svg" alt="Node.js 22+">
   <img src="https://img.shields.io/badge/DSH-0.2.1--rc.2-5378f6.svg" alt="已在 DSH Desktop 0.2.1-rc.2 验证">
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="MIT"></a>
@@ -24,6 +25,24 @@
 DSH 的插件不是装进 `node_modules` 就算生效。profile 选中了哪些 bundle、patch 最后覆盖了什么、包声明的版本能不能用，都可能决定插件是否加载。
 
 `plugin-health-check` 沿着 **profile → bundle → patch → 配置条目** 检查这些问题，给出发现、来源和覆盖范围。项目只支持 DSH，不会启动被检查的插件，也不会改动你的配置。
+
+## 作为 DSH 插件安装
+
+一条命令装进 profile，重启 DSH 后 agent 就多了一个只读工具 `plugin_health_check`：
+
+```bash
+dsh plugin --profile web add github:GlariaLuminous/plugin-health-check
+```
+
+之后直接对 agent 说“检查我的 DSH 插件”，或者“我想装 /path/to/plugin，会不会和现有插件冲突？”，agent 会带着 `candidate` 参数调用它。工具只读文件，不启动插件、不执行命令、不改配置。
+
+> **状态：实验性。** 检查引擎（CLI）已在 DSH Desktop 0.2.1-rc.2 上验证；agent 工具入口刚加入，只在不依赖宿主的测试里验证过注册流程，还没有在真实 DSH 里长期使用。遇到问题请带上 DSH 版本提交 issue。DSH 仍是开发者预览版，升级后请重新检查。
+
+不想装进 profile，也可以直接用命令行：
+
+```bash
+npx dsh-plugin-health-check --profile web
+```
 
 ## 快速开始
 
@@ -115,6 +134,11 @@ npm test
 测试会创建临时 profile 和 ASAR，不依赖本机 DSH。验证 Python 启动器的测试还需 Python 3.8+。
 
 ```text
+src/
+  index.js                  # DSH 插件入口：注册 plugin_health_check 工具
+  tool.js                   # 工具定义（依赖注入，测试不需要 DSH）
+  report.js                 # 把扫描结果整理成 agent 能读的摘要和 JSON
+cordis.patch.yml            # bundle patch：把插件插入 profile
 scripts/
   dsh_health_check.mjs      # 命令行入口
   plugin_health_check.py   # 可选 Python 启动器

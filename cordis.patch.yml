@@ -1,0 +1,15 @@
+# The dsh-plugin-health-check bundle patch.
+#
+# `dsh plugin --profile <name> add …` installs this package, sees the
+# `dsh.bundle.patch` field in package.json and appends the package to the
+# profile's ordered `dsh.profile.bundles` list. This file is then composed as
+# one layer over the bundles below it.
+#
+# One insert, one row: the plugin that registers the `plugin_health_check`
+# tool. A later layer (the profile's cordis.patch.yml or a `--patch` overlay)
+# can address the row by its `id`; an id-targeted patch replaces the row's
+# whole `config` rather than merging into it.
+
+- insert:
+    - id: plugin-health-check
+      name: dsh-plugin-health-check
