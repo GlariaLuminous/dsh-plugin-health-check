@@ -122,9 +122,11 @@ export class PackageReader {
     this.profile = path.resolve(profile);
     this.installations = installations.map(p => path.resolve(p));
     this.bundleDirs = [];
+    this.overrides = new Map();
   }
 
   locate(name, roots) {
+    if (this.overrides.has(name)) return this.overrides.get(name);
     for (const root of roots) {
       for (const dir of [path.join(root, 'node_modules', name), root]) {
         const filename = path.join(dir, 'package.json');
@@ -178,11 +180,11 @@ export class PackageReader {
 export function compatibility(manifest, runtime, exemptions = {}) {
   try {
     const requirements = {};
-    const engines = manifest.engines ?? {};
+    const engines = Object.hasOwn(manifest, 'engines') ? manifest.engines : {};
     if (!isObject(engines)) throw new Error('engines must be an object');
     if (Object.hasOwn(engines, 'dsh')) requirements['engines.dsh'] = engines.dsh;
     else {
-      const peers = manifest.peerDependencies ?? {};
+      const peers = Object.hasOwn(manifest, 'peerDependencies') ? manifest.peerDependencies : {};
       if (!isObject(peers)) throw new Error('peerDependencies must be an object');
       for (const [name, range] of Object.entries(peers)) {
         if (typeof range !== 'string') throw new Error('peer ranges must be strings');

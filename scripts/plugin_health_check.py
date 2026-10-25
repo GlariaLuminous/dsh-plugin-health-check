@@ -26,6 +26,7 @@ import json
 import os
 import re
 import sys
+import subprocess
 import urllib.request
 from collections import defaultdict
 
@@ -493,7 +494,35 @@ def main(argv=None):
                          "directory would introduce against the installed set")
     ap.add_argument("--online", action="store_true",
                     help="also query GitHub for upstream staleness (R7)")
+    ap.add_argument("--host", choices=("legacy", "dsh"), default="legacy",
+                    help="select the native DSH profile auditor or the original directory scanner")
+    ap.add_argument("--profile", default="desktop", help="DSH profile name (default: desktop)")
+    ap.add_argument("--dsh-home", help="DSH home directory (default: DSH_HOME or ~/.dsh)")
+    ap.add_argument("--dsh-install", action="append", help="DSH installation directory; repeatable")
+    ap.add_argument("--dsh-version", help="explicit DSH runtime version if discovery is unavailable")
+    ap.add_argument("--patch", action="append", help="extra DSH invocation overlay; repeatable")
     args = ap.parse_args(argv)
+
+    if args.host == "dsh":
+        if args.online:
+            print("error: --online is only supported by the legacy directory scanner", file=sys.stderr)
+            return 2
+        command = ["node", os.path.join(os.path.dirname(os.path.abspath(__file__)), "dsh_health_check.mjs"),
+                   "--profile", args.profile]
+        for flag, value in (("--dsh-home", args.dsh_home), ("--dsh-version", args.dsh_version),
+                            ("--candidate", args.candidate)):
+            if value is not None:
+                command.extend([flag, value])
+        for flag, values in (("--dsh-install", args.dsh_install), ("--patch", args.patch)):
+            for value in values or []:
+                command.extend([flag, value])
+        if args.json:
+            command.append("--json")
+        try:
+            return subprocess.call(command)
+        except OSError:
+            print("error: DSH mode requires Node.js 22+; run npm ci --ignore-scripts first", file=sys.stderr)
+            return 2
 
     root = os.path.abspath(args.root)
     if not os.path.isdir(root):

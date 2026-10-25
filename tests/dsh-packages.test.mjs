@@ -3,7 +3,7 @@ import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
-import { PackageReader, compatibility } from '../scripts/dsh/packages.mjs';
+import { PackageReader, compatibility, readJson } from '../scripts/dsh/packages.mjs';
 
 test('DSH engine takes priority; fallback peers admit prereleases and workspace peers', () => {
   const runtime = '0.2.1-rc.2';
@@ -14,7 +14,27 @@ test('DSH engine takes priority; fallback peers admit prereleases and workspace 
     '@deepseek-ai/dsh-skill': 'workspace:*' } }, runtime).status, 'compatible');
   assert.equal(compatibility({ engines: { dsh: '' } }, runtime).status, 'incompatible');
   assert.equal(compatibility({ engines: { dsh: null } }, runtime).status, 'invalid');
+  assert.equal(compatibility({ engines: null }, runtime).status, 'invalid');
   assert.equal(compatibility({ engines: { dsh: '*' } }, null).status, 'unknown');
+});
+
+test('Electron ASAR package metadata is readable without Electron or executing the archive', t => {
+  const root = mkdtempSync(join(tmpdir(), 'phc-asar-'));
+  t.after(() => rmSync(root, { recursive: true, force: true }));
+  const data = Buffer.from(JSON.stringify({ name: '@deepseek-ai/dsh-base', version: '0.2.1-rc.2' }));
+  const tree = { files: { dsh: { files: { node_modules: { files: { '@deepseek-ai': { files: {
+    'dsh-base': { files: { 'package.json': { size: data.length, offset: '0' } } },
+  } } } } } } } };
+  const header = Buffer.from(JSON.stringify(tree));
+  const prefix = Buffer.alloc(16);
+  prefix.writeUInt32LE(4, 0);
+  prefix.writeUInt32LE(header.length + 8, 4);
+  prefix.writeUInt32LE(header.length + 4, 8);
+  prefix.writeUInt32LE(header.length, 12);
+  const archive = join(root, 'app.asar');
+  writeFileSync(archive, Buffer.concat([prefix, header, data]));
+  assert.equal(readJson(join(archive, 'dsh/node_modules/@deepseek-ai/dsh-base/package.json')).version, '0.2.1-rc.2');
+  assert.equal(new PackageReader(root, [join(archive, 'dsh')]).bundle('@deepseek-ai/dsh-base').source, 'installation');
 });
 
 test('only an exact package version and runtime exemption admits an incompatible bundle', () => {
