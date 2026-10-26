@@ -58,7 +58,7 @@ Runtime tools, commands and hooks, Agent presets/scopes, effective session permi
 ## Install as a DSH plugin
 
 ```sh
-dsh plugin --profile web add github:GlariaLuminous/plugin-health-check
+dsh plugin --profile web add github:GlariaLuminous/dsh-plugin-health-check
 ```
 
 The package declares `dsh.bundle.patch`, so `dsh plugin` appends it to the profile's `dsh.profile.bundles`; restart DSH afterwards. Its patch inserts one entry, which registers the read-only `plugin_health_check` tool. Plugins run with Harness's local permissions, so install only sources you trust.

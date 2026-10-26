@@ -24,7 +24,7 @@ DSH plugin availability depends on selected bundles, ordered patches, package re
 One command adds it to a profile; after a restart the agent has a read-only `plugin_health_check` tool:
 
 ```bash
-dsh plugin --profile web add github:GlariaLuminous/plugin-health-check
+dsh plugin --profile web add github:GlariaLuminous/dsh-plugin-health-check
 ```
 
 Then ask the agent to "check my DSH plugins", or "will /path/to/plugin conflict with what I have?"; it passes the folder as `candidate`. The tool only reads files: it starts no plugin, runs no command and changes no configuration.
@@ -40,8 +40,8 @@ npx dsh-plugin-health-check --profile web
 ## Quick start
 
 ```bash
-git clone https://github.com/GlariaLuminous/plugin-health-check.git
-cd plugin-health-check
+git clone https://github.com/GlariaLuminous/dsh-plugin-health-check.git
+cd dsh-plugin-health-check
 npm ci --ignore-scripts
 node scripts/dsh_health_check.mjs --profile desktop
 ```
