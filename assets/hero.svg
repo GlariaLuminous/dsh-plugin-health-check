@@ -19,8 +19,8 @@
           stroke-linecap="round" stroke-linejoin="round"/>
     <circle cx="50" cy="55" r="64" fill="none" stroke="#38bdf8" stroke-opacity="0.25" stroke-width="2"/>
   </g>
-  <text x="200" y="100" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="46"
-        font-weight="700" fill="#f8fafc">plugin-health-check</text>
+  <text x="200" y="100" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="42"
+        font-weight="700" fill="#f8fafc">dsh-plugin-health-check</text>
   <text x="202" y="140" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="19"
         fill="#94a3b8">Read-only checks for DeepSeek Harness.</text>
   <g font-family="Consolas, monospace" font-size="14">

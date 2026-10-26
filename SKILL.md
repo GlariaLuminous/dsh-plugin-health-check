@@ -1,5 +1,5 @@
 ---
-name: plugin-health-check
+name: dsh-plugin-health-check
 description: Check DeepSeek Harness (DSH) profiles and plugins for invalid bundles, runtime version incompatibility, patch errors and MCP server conflicts. Use for "检查我的 DSH 插件", "DSH 插件冲突", "插件体检", or checking a local DSH plugin before installation or update.
 ---
 

@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/hero.svg" width="860" alt="plugin-health-check: DeepSeek Harness plugin checks">
+  <img src="assets/hero.svg" width="860" alt="dsh-plugin-health-check: DeepSeek Harness plugin checks">
 </p>
 
 <p align="center">
@@ -99,7 +99,7 @@ This is static inspection. Runtime tools, commands/hooks, Agent presets, MCP con
 
 ## Use as a DSH skill
 
-Place the complete repository under `$DSH_HOME/skills/plugin-health-check/` or `<project-root>/.dsh/skills/plugin-health-check/` and run `npm ci --ignore-scripts` there. Keep `SKILL.md` beside `scripts/`, then invoke `/plugin-health-check` or ask the agent to check a DSH profile.
+Place the complete repository under `$DSH_HOME/skills/dsh-plugin-health-check/` or `<project-root>/.dsh/skills/dsh-plugin-health-check/` and run `npm ci --ignore-scripts` there. Keep `SKILL.md` beside `scripts/`, then invoke `/dsh-plugin-health-check` or ask the agent to check a DSH profile.
 
 See the [DSH reference](docs/dsh.md) for options and limitations. The CLI now targets DSH directly; `--host`, `--root`, `--online` and `--desc-budget` have been removed.
 
