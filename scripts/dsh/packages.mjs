@@ -51,8 +51,17 @@ export function exists(filename) {
 }
 
 export function readText(filename) {
+  // Electron's fs already exposes ASAR contents as virtual files. Prefer it:
+  // opening the archive itself can fail there even when the inner file is readable.
+  let nativeError;
+  try { return fs.readFileSync(filename, 'utf8').replace(/^\uFEFF/, ''); }
+  catch (error) {
+    if (!['ENOENT', 'ENOTDIR'].includes(error.code)) throw error;
+    nativeError = error;
+  }
+  // Plain Node cannot traverse an ASAR file; retain the static reader for CLI use.
   const archived = archiveEntry(filename);
-  if (!archived) return fs.readFileSync(filename, 'utf8').replace(/^\uFEFF/, '');
+  if (!archived) throw nativeError;
   const { archive, inside, entry, offset } = archived;
   if (entry.unpacked) return fs.readFileSync(`${archive}.unpacked/${inside}`, 'utf8').replace(/^\uFEFF/, '');
   if (!Number.isSafeInteger(entry.size) || entry.size > 16 * 1024 * 1024 || entry.offset === undefined) {

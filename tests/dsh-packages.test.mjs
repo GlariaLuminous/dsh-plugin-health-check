@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
 import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -35,6 +36,54 @@ test('Electron ASAR package metadata is readable without Electron or executing t
   writeFileSync(archive, Buffer.concat([prefix, header, data]));
   assert.equal(readJson(join(archive, 'dsh/node_modules/@deepseek-ai/dsh-base/package.json')).version, '0.2.1-rc.2');
   assert.equal(new PackageReader(root, [join(archive, 'dsh')]).bundle('@deepseek-ai/dsh-base').source, 'installation');
+});
+
+test('Electron virtual ASAR reads resolve shipped bundles without blocking profile bundles', t => {
+  const root = mkdtempSync(join(tmpdir(), 'phc-electron-asar-'));
+  t.after(() => rmSync(root, { recursive: true, force: true }));
+  const archive = join(root, 'app.asar');
+  const install = join(archive, 'dsh');
+  const profile = join(root, 'profile');
+  const local = join(profile, 'node_modules', 'local-bundle');
+  mkdirSync(local, { recursive: true });
+  writeFileSync(join(local, 'package.json'), JSON.stringify({ name: 'local-bundle' }));
+  const virtual = new Map([
+    [join(install, 'package.json'), JSON.stringify({ name: '@deepseek-ai/dsh', version: '0.2.1-rc.2' })],
+    [join(install, 'node_modules', '@deepseek-ai/dsh-base', 'package.json'), '\uFEFF' + JSON.stringify({ name: '@deepseek-ai/dsh-base', version: '0.2.1-rc.2' })],
+  ]);
+  const nativeRead = fs.readFileSync;
+  const nativeExists = fs.existsSync;
+  const nativeOpen = fs.openSync;
+  let rawArchiveOpens = 0;
+  t.mock.method(fs, 'existsSync', filename => virtual.has(filename) || nativeExists(filename));
+  t.mock.method(fs, 'readFileSync', (filename, options) => {
+    if (virtual.has(filename)) {
+      assert.equal(options, 'utf8');
+      return virtual.get(filename);
+    }
+    return nativeRead(filename, options);
+  });
+  // Electron can read virtual files while rejecting a raw open of app.asar.
+  t.mock.method(fs, 'openSync', (filename, ...args) => {
+    if (filename === archive) {
+      rawArchiveOpens++;
+      throw Object.assign(new Error('archive is virtual'), { code: 'ENOENT' });
+    }
+    return nativeOpen(filename, ...args);
+  });
+  const reader = new PackageReader(profile, [install]);
+  assert.equal(reader.bundle('@deepseek-ai/dsh-base').manifest.version, '0.2.1-rc.2');
+  assert.equal(rawArchiveOpens, 0);
+  assert.equal(reader.locate('@deepseek-ai/dsh', [install]).manifest.version, '0.2.1-rc.2');
+  assert.equal(reader.bundle('local-bundle').source, 'profile');
+});
+
+test('ASAR native read permission errors are preserved without bypassing the filesystem', t => {
+  const denied = Object.assign(new Error('access denied'), { code: 'EACCES' });
+  t.mock.method(fs, 'readFileSync', () => { throw denied; });
+  const rawOpen = t.mock.method(fs, 'openSync', () => { throw new Error('unexpected raw archive open'); });
+  assert.throws(() => readJson(join(tmpdir(), 'denied.asar', 'package.json')), error => error === denied);
+  assert.equal(rawOpen.mock.callCount(), 0);
 });
 
 test('only an exact package version and runtime exemption admits an incompatible bundle', () => {
