@@ -50,11 +50,11 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/GlariaLuminous/plugin-health-check.git"
+    "url": "git+https://github.com/GlariaLuminous/dsh-plugin-health-check.git"
   },
-  "homepage": "https://github.com/GlariaLuminous/plugin-health-check#readme",
+  "homepage": "https://github.com/GlariaLuminous/dsh-plugin-health-check#readme",
   "bugs": {
-    "url": "https://github.com/GlariaLuminous/plugin-health-check/issues"
+    "url": "https://github.com/GlariaLuminous/dsh-plugin-health-check/issues"
   },
   "keywords": [
     "dsh",

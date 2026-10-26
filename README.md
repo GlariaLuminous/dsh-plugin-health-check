@@ -16,7 +16,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/GlariaLuminous/plugin-health-check/actions/workflows/ci.yml"><img src="https://github.com/GlariaLuminous/plugin-health-check/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <a href="https://github.com/GlariaLuminous/dsh-plugin-health-check/actions/workflows/ci.yml"><img src="https://github.com/GlariaLuminous/dsh-plugin-health-check/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
   <img src="https://img.shields.io/badge/Node.js-22%2B-43853d.svg" alt="Node.js 22+">
   <img src="https://img.shields.io/badge/DSH-0.2.1--rc.2-5378f6.svg" alt="已在 DSH Desktop 0.2.1-rc.2 验证">
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="MIT"></a>
@@ -31,7 +31,7 @@ DSH 的插件不是装进 `node_modules` 就算生效。profile 选中了哪些 
 一条命令装进 profile，重启 DSH 后 agent 就多了一个只读工具 `plugin_health_check`：
 
 ```bash
-dsh plugin --profile web add github:GlariaLuminous/plugin-health-check
+dsh plugin --profile web add github:GlariaLuminous/dsh-plugin-health-check
 ```
 
 之后直接对 agent 说“检查我的 DSH 插件”，或者“我想装 /path/to/plugin，会不会和现有插件冲突？”，agent 会带着 `candidate` 参数调用它。工具只读文件，不启动插件、不执行命令、不改配置。
@@ -49,8 +49,8 @@ npx dsh-plugin-health-check --profile web
 需要 **Node.js 22+**。
 
 ```bash
-git clone https://github.com/GlariaLuminous/plugin-health-check.git
-cd plugin-health-check
+git clone https://github.com/GlariaLuminous/dsh-plugin-health-check.git
+cd dsh-plugin-health-check
 npm ci --ignore-scripts
 node scripts/dsh_health_check.mjs --profile desktop
 ```
