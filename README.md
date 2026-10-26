@@ -3,15 +3,17 @@
 </p>
 
 <p align="center">
-  <strong>装 DSH 插件之前，先检查它会不会出问题。</strong><br>
-  面向 DeepSeek Harness 的只读插件检查工具
+  <strong>装 DSH 插件之前，先模拟一遍。</strong><br>
+  只读、静态，在你真实的 profile 上按官方算法合成，再告诉你哪里会出问题。
 </p>
 
 <p align="center">
-  <a href="#快速开始">快速开始</a> ·
-  <a href="#检查范围">检查范围</a> ·
-  <a href="#安装前检查">安装前检查</a> ·
-  <a href="docs/dsh.md">详细用法</a> ·
+  <a href="#安装">安装</a> ·
+  <a href="#原理">原理</a> ·
+  <a href="#示例输出">示例输出</a> ·
+  <a href="#安装前模拟">安装前模拟</a> ·
+  <a href="#边界">边界</a> ·
+  <a href="docs/dsh.md">参考文档</a> ·
   <a href="README.en.md">English</a>
 </p>
 
@@ -19,34 +21,42 @@
   <a href="https://github.com/GlariaLuminous/dsh-plugin-health-check/actions/workflows/ci.yml"><img src="https://github.com/GlariaLuminous/dsh-plugin-health-check/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
   <img src="https://img.shields.io/badge/Node.js-22%2B-43853d.svg" alt="Node.js 22+">
   <img src="https://img.shields.io/badge/DSH-0.2.1--rc.2-5378f6.svg" alt="已在 DSH Desktop 0.2.1-rc.2 验证">
+  <img src="https://img.shields.io/badge/status-experimental-f59e0b.svg" alt="实验性">
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="MIT"></a>
 </p>
 
-DSH 的插件不是装进 `node_modules` 就算生效。profile 选中了哪些 bundle、patch 最后覆盖了什么、包声明的版本能不能用，都可能决定插件是否加载。
+---
 
-`dsh-plugin-health-check` 沿着 **profile → bundle → patch → 配置条目** 检查这些问题，给出发现、来源和覆盖范围。项目只支持 DSH，不会启动被检查的插件，也不会改动你的配置。
+DSH 的插件不是装进 `node_modules` 就生效。能不能加载，取决于 profile 选了哪些 bundle、patch 按什么顺序覆盖、包声明的版本 DSH 认不认。这些问题大多要重启之后才暴露，表现往往只是“某个东西悄悄没了”。
 
-## 作为 DSH 插件安装
+`dsh-plugin-health-check` 沿着 **profile → bundle → patch → 配置条目** 把这条链路在装之前走一遍。它不启动任何插件，不执行任何命令，不改动你的配置。
 
-一条命令装进 profile，重启 DSH 后 agent 就多了一个只读工具 `plugin_health_check`：
+| 你遇到的现象 | 常见原因 | 对应发现 |
+|---|---|---|
+| 装完重启，插件没出现 | bundle 解析不到、没声明 `dsh.bundle.patch`、版本不被当前 DSH 接纳 | `DSH_PACKAGE` · `DSH_VERSION` |
+| 配置被另一层悄悄换掉 | patch 按 id 整体替换 `config`；id 重复、覆盖未命中、include 成环 | `DSH_PATCH` |
+| 两个 MCP 服务只剩一个 | 同一作用域里 `serverName` 重复，重复注册会被拒绝 | `R1` · `R8` |
+| 检查结果为空，不知道算不算健康 | 动态表达式、未解析的模块、服务隔离 | `DSH_COVERAGE`，状态为 `incomplete` |
+
+## 安装
+
+作为 DSH 插件装进 profile，一条命令：
 
 ```bash
 dsh plugin --profile web add github:GlariaLuminous/dsh-plugin-health-check
 ```
 
-之后直接对 agent 说“检查我的 DSH 插件”，或者“我想装 /path/to/plugin，会不会和现有插件冲突？”，agent 会带着 `candidate` 参数调用它。工具只读文件，不启动插件、不执行命令、不改配置。
+重启 DSH，然后直接对 agent 说：
 
-> **状态：实验性。** 检查引擎（CLI）已在 DSH Desktop 0.2.1-rc.2 上验证；agent 工具入口刚加入，只在不依赖宿主的测试里验证过注册流程，还没有在真实 DSH 里长期使用。遇到问题请带上 DSH 版本提交 issue。DSH 仍是开发者预览版，升级后请重新检查。
+> 检查我的 DSH 插件。
 
-不想装进 profile，也可以直接用命令行：
+> 我想装 `/path/to/plugin`，会不会和现有插件冲突？
 
-```bash
-npx dsh-plugin-health-check --profile web
-```
+agent 会调用只读工具 `plugin_health_check`，后一句会把目录作为 `candidate` 传进去。
 
-## 快速开始
+> **状态：实验性。** 检查引擎（命令行）已在 DSH Desktop 0.2.1-rc.2 上验证。agent 工具入口较新：注册流程有不依赖宿主的测试覆盖，但还没有在真实 DSH 里长期使用。DSH 仍是开发者预览版，升级后请重新检查。遇到问题请带上 DSH 版本提交 issue。
 
-需要 **Node.js 22+**。
+只想跑命令行、不装进 profile：
 
 ```bash
 git clone https://github.com/GlariaLuminous/dsh-plugin-health-check.git
@@ -55,102 +65,93 @@ npm ci --ignore-scripts
 node scripts/dsh_health_check.mjs --profile desktop
 ```
 
-检查 Web profile，或输出 JSON：
+需要 **Node.js 22+**。默认读取 `$DSH_HOME`，未设置时使用 `~/.dsh`；`--profile web` 检查 Web profile，`--json` 输出结构化报告。参数全表见 [参考文档](docs/dsh.md)。
 
-```bash
-node scripts/dsh_health_check.mjs --profile web
-node scripts/dsh_health_check.mjs --profile desktop --json
-```
-
-默认读取 `$DSH_HOME`，未设置时使用 `~/.dsh`。自定义位置：
-
-```bash
-node scripts/dsh_health_check.mjs --dsh-home /path/to/.dsh --profile desktop
-```
-
-也提供 Python 3.8+ 启动器，使用相同的 DSH 参数，仍需 Node.js 和上述依赖：
-
-```bash
-python scripts/plugin_health_check.py --profile desktop --json
-```
+## 原理
 
 <p align="center">
-  <img src="assets/demo.svg" width="860" alt="DSH 检查输出示意：两个 bundle 中发现同作用域 MCP serverName 冲突，结果 STATIC FAIL">
+  <img src="assets/flow.svg" width="860" alt="流程：profile 选出 bundle，patch 按官方 Cordis 算法逐层合成，静态扫描条目并给出发现；运行时行为不在检查范围内">
 </p>
 
-## 检查范围
+- **按宿主的规则读，不自己发明规则。** patch 合成用的是官方 `@deepseek-ai/cordis-plugin-include` 的算法；版本准入遵循 DSH 的 `engines.dsh` 优先、否则看 DSH peers 的规则，预发布版本参与比较。
+- **覆盖层顺序一致。** bundle → profile → home → 命令行 `--patch`，处理 disabled、分组、静态 include 和循环引用。
+- **读得到 Desktop 内置包。** 直接读取 Electron ASAR 里的包元数据，不需要启动 Electron。
 
-| 检查 | 具体内容 |
-|---|---|
-| profile 和 bundle | 读取选中的 bundle，解析 scoped 包、pnpm 链接和 Desktop ASAR 内置包 |
-| 版本兼容 | 按 DSH 规则检查 engines、DSH peers、预发布范围及精确版本豁免 |
-| patch 与 include | 按官方 Cordis 算法合并 bundle、profile、home 和命令行覆盖层，处理 disabled、分组、静态 include 和循环引用 |
-| MCP 配置 | 检查可确定作用域中的 serverName 重复、名称格式、基本 stdio/HTTP transport 配置 |
-| 候选更新 | 按包身份替换已有版本，重新组合配置，报告新增问题与原环境状态 |
-| 检查覆盖率 | 列出选中和已解析的 bundle 数，以及动态表达式、未解析模块、服务隔离等未知项 |
+## 示例输出
 
-没有发现插件、版本未知或遇到动态配置时，结果会明确标记为 **incomplete**。不会因为没有采集到数据就判断“全部正常”。
-
-## 安装前检查
-
-将候选插件的本地源码或解包目录传给 `--candidate`：
-
-```bash
-node scripts/dsh_health_check.mjs --profile desktop --candidate /path/to/plugin --json
-```
-
-检查过程不安装候选包，不执行它的构建脚本或 `apply`。更新同名包时会替换旧身份，避免把同一个插件重复计入。报告同时保留原环境的 baseline；原环境检查失败或不完整时，不会给出干净的通过结论。
-
-## 看懂结果
+<p align="center">
+  <img src="assets/demo.svg" width="860" alt="示意输出：同一作用域内 MCP serverName 重复，结果 STATIC FAIL">
+</p>
 
 | 退出码 | 状态 | 含义 |
 |---|---|---|
 | `0` | `pass` | 已覆盖的静态配置检查通过 |
 | `1` | `fail` | 存在致命发现 |
 | `2` | `error` | 参数、路径或运行环境错误 |
-| `3` | `incomplete` | 检查范围不完整，需要补充信息或运行态核实 |
+| `3` | `incomplete` | 覆盖不完整，需要补充信息或运行态核实 |
 
-JSON 包含 `packages`、经过筛选的 `entries`、`findings`、`coverage`、`status` 和 `exit_code`。配置正文、凭据和 YAML 错误片段不会写进报告；本地安装路径会保留，便于定位问题。
+JSON 报告包含 `packages`、`entries`、`findings`、`coverage`、`status` 和 `exit_code`。配置正文、凭据和 YAML 错误片段不会写进报告；本地安装路径会保留，便于定位，分享报告前请留意。
 
-**当前是静态检查。** 运行时注册的工具、命令和 hook、Agent preset 激活、MCP 连接与工具发现、会话实际权限尚未验证。`!!js` 保持为数据，不会求值。`STATIC PASS` 表示已覆盖配置没有发现问题，不代表插件已经成功运行。
+## 安装前模拟
 
-## 让 DSH agent 使用
+把候选插件的本地源码或解包目录交给 `--candidate`：
 
-将完整仓库放到以下任一位置，并在该目录执行 `npm ci --ignore-scripts`：
+```bash
+node scripts/dsh_health_check.mjs --profile desktop --candidate /path/to/plugin --json
+```
+
+- 候选包**不会被安装**，也不会执行它的构建脚本或 `apply`。
+- 同名包按包身份替换旧版本，不会被重复计入；否则作为新的一层加入。
+- 报告只列出**新增**的问题，并保留原环境的 baseline。原环境本身失败或不完整时，不会给出干净的通过结论。
+
+## 边界
+
+这是静态检查。**未验证**的内容：运行时注册的工具、命令和 hook，Agent preset 的激活，MCP 的实际连接与 `tools/list`，会话里的实际权限。`!!js` 表达式只当数据，不会求值。
+
+所以 `STATIC PASS` 的意思是“已覆盖的配置没有发现问题”，不是“插件能成功运行”，更不是“插件是安全的”。没有发现插件、版本未知或遇到动态配置时，结果会标记为 `incomplete`，不会因为没采集到数据就说“一切正常”。
+
+## 相关工具
+
+DSH 生态里已有几个体检类项目，侧重点不同，有重叠，也互补。以下据各项目的公开说明，细节以它们自己的 README 为准。
+
+| 项目 | 侧重 |
+|---|---|
+| [dsh-plugin-doctor](https://github.com/zoahdev/dsh-plugin-doctor) | 插件作者侧：manifest、patch、入口、文件、构建，以及打包后在全新 profile 里的安装验证 |
+| [dsh-doctor](https://github.com/asdf17128/dsh-doctor) | profile 层：被整体替换丢掉的配置字段、指向不存在条目 id 的 patch、工具名冲突 |
+| [dsh-xray](https://socket.dev/npm/package/dsh-xray) | 运行中的 DSH：实际加载了什么、上下文成本、运行时健康 |
+| **dsh-plugin-health-check** | 用户侧：在你真实的 profile 上按官方算法合成后做静态检查，并支持安装前模拟候选插件 |
+
+## 作为 skill 使用
+
+不装成插件时，也可以把完整仓库放到下面任一位置，并在该目录执行 `npm ci --ignore-scripts`：
 
 - `$DSH_HOME/skills/dsh-plugin-health-check/`
 - `<项目根目录>/.dsh/skills/dsh-plugin-health-check/`
 
-保留 `SKILL.md` 和 `scripts/` 的相对位置。随后使用 `/dsh-plugin-health-check`，或直接说“检查我的 DSH 插件”。skill 会指引 agent 从自己的目录执行检查，并在总结中保留覆盖范围。
+保留 `SKILL.md` 和 `scripts/` 的相对位置，然后使用 `/dsh-plugin-health-check`，或直接说“检查我的 DSH 插件”。skill 会指引 agent 从自己的目录执行检查，并在总结里保留覆盖范围。
 
-## 参数和开发
-
-完整参数、诊断分类和实现边界见 [DSH 使用说明](docs/dsh.md)。从早期版本升级时，直接使用 DSH 参数；`--host`、`--root`、`--online` 和 `--desc-budget` 已移除。
+## 开发
 
 ```bash
+npm ci --ignore-scripts
 npm test
 ```
 
-测试会创建临时 profile 和 ASAR，不依赖本机 DSH。验证 Python 启动器的测试还需 Python 3.8+。
+测试会创建临时 profile 和 ASAR，不依赖本机 DSH。CI 在 Ubuntu 和 Windows 上，用 Node 22 与 24 运行。
 
 ```text
-src/
-  index.js                  # DSH 插件入口：注册 plugin_health_check 工具
-  tool.js                   # 工具定义（依赖注入，测试不需要 DSH）
-  report.js                 # 把扫描结果整理成 agent 能读的摘要和 JSON
+src/                        # DSH 插件入口与 plugin_health_check 工具
+  index.js  tool.js  report.js
 cordis.patch.yml            # bundle patch：把插件插入 profile
 scripts/
   dsh_health_check.mjs      # 命令行入口
-  plugin_health_check.py   # 可选 Python 启动器
-  dsh/
-    packages.mjs           # 包、ASAR 和版本要求
-    composition.mjs        # YAML 与官方 patch 算法
-    scan.mjs               # DSH 静态检查与候选比较
-tests/                     # DSH 回归测试
-docs/dsh.md                # 详细用法
-SKILL.md                   # DSH skill 工作流
+  plugin_health_check.py    # 可选 Python 启动器
+  dsh/                      # 包解析 · patch 合成 · 静态扫描
+tests/                      # 回归测试
+docs/dsh.md                 # 参考文档
+SKILL.md                    # skill 工作流
 ```
 
-遇到漏报或误报，欢迎提交最小的 DSH profile/patch 示例、宿主版本和预期行为。请在分享前移除配置中的凭据和个人路径。
+遇到漏报或误报，欢迎提交最小的 DSH profile/patch 示例、宿主版本和预期行为。分享前请移除配置里的凭据和个人路径。
 
 [MIT](LICENSE)
