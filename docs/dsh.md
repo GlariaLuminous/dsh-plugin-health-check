@@ -73,9 +73,9 @@ The tool returns `status`, `exit_code`, a readable `summary` and the compact JSO
 
 ## Install as a DSH skill
 
-Place the complete repository at `$DSH_HOME/skills/plugin-health-check/` or `<project-root>/.dsh/skills/plugin-health-check/`, then run `npm ci --ignore-scripts` there. Keep `scripts/` beside `SKILL.md`. Cloning into an arbitrary directory does not register the skill.
+Place the complete repository at `$DSH_HOME/skills/dsh-plugin-health-check/` or `<project-root>/.dsh/skills/dsh-plugin-health-check/`, then run `npm ci --ignore-scripts` there. Keep `scripts/` beside `SKILL.md`. Cloning into an arbitrary directory does not register the skill.
 
-Invoke `/plugin-health-check` or ask the agent to audit a DSH profile. The skill directs the agent to execute from its base directory and include runtime limitations in its summary. It does not change the audited profile.
+Invoke `/dsh-plugin-health-check` or ask the agent to audit a DSH profile. The skill directs the agent to execute from its base directory and include runtime limitations in its summary. It does not change the audited profile.
 
 ## Validation
 

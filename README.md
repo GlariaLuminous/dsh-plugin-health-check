@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/hero.svg" width="860" alt="plugin-health-check：DeepSeek Harness 插件体检">
+  <img src="assets/hero.svg" width="860" alt="dsh-plugin-health-check：DeepSeek Harness 插件体检">
 </p>
 
 <p align="center">
@@ -24,7 +24,7 @@
 
 DSH 的插件不是装进 `node_modules` 就算生效。profile 选中了哪些 bundle、patch 最后覆盖了什么、包声明的版本能不能用，都可能决定插件是否加载。
 
-`plugin-health-check` 沿着 **profile → bundle → patch → 配置条目** 检查这些问题，给出发现、来源和覆盖范围。项目只支持 DSH，不会启动被检查的插件，也不会改动你的配置。
+`dsh-plugin-health-check` 沿着 **profile → bundle → patch → 配置条目** 检查这些问题，给出发现、来源和覆盖范围。项目只支持 DSH，不会启动被检查的插件，也不会改动你的配置。
 
 ## 作为 DSH 插件安装
 
@@ -118,10 +118,10 @@ JSON 包含 `packages`、经过筛选的 `entries`、`findings`、`coverage`、`
 
 将完整仓库放到以下任一位置，并在该目录执行 `npm ci --ignore-scripts`：
 
-- `$DSH_HOME/skills/plugin-health-check/`
-- `<项目根目录>/.dsh/skills/plugin-health-check/`
+- `$DSH_HOME/skills/dsh-plugin-health-check/`
+- `<项目根目录>/.dsh/skills/dsh-plugin-health-check/`
 
-保留 `SKILL.md` 和 `scripts/` 的相对位置。随后使用 `/plugin-health-check`，或直接说“检查我的 DSH 插件”。skill 会指引 agent 从自己的目录执行检查，并在总结中保留覆盖范围。
+保留 `SKILL.md` 和 `scripts/` 的相对位置。随后使用 `/dsh-plugin-health-check`，或直接说“检查我的 DSH 插件”。skill 会指引 agent 从自己的目录执行检查，并在总结中保留覆盖范围。
 
 ## 参数和开发
 

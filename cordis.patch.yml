@@ -11,5 +11,5 @@
 # whole `config` rather than merging into it.
 
 - insert:
-    - id: plugin-health-check
+    - id: dsh-plugin-health-check
       name: dsh-plugin-health-check

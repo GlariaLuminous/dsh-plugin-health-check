@@ -147,7 +147,7 @@ test('the plugin entry registers exactly one tool against the tools service', as
   entry.apply({ tools: { register: definition => { registered.push(definition); } } });
 
   assert.deepEqual(entry.inject, ['tools']);
-  assert.equal(entry.name, 'plugin-health-check');
+  assert.equal(entry.name, 'dsh-plugin-health-check');
   assert.equal(registered.length, 1);
   assert.equal(registered[0].name, TOOL_NAME);
 });

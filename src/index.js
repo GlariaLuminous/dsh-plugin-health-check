@@ -14,7 +14,7 @@ import { defineTool } from '@deepseek-ai/dsh-tools'
 import { createHealthCheckTool } from './tool.js'
 
 /** Cordis plugin name, shown in loader diagnostics and the runtime plugin tree. */
-export const name = 'plugin-health-check'
+export const name = 'dsh-plugin-health-check'
 
 /** `tools` is required: without a registry there is nothing to register into. */
 export const inject = ['tools']
