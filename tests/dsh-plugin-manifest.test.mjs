@@ -4,9 +4,11 @@
  * tarball contains everything the entry imports.
  */
 import assert from 'node:assert/strict';
-import { existsSync, readFileSync } from 'node:fs';
+import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import { resolve } from 'node:path';
+import { tmpdir } from 'node:os';
+import { pathToFileURL } from 'node:url';
 import { test } from 'node:test';
 
 import { load } from 'js-yaml';
@@ -43,6 +45,29 @@ test('the DSH tools package is an optional peer, so the CLI works without a host
   assert.ok(manifest.peerDependencies['@deepseek-ai/dsh-tools']);
   assert.equal(manifest.peerDependenciesMeta['@deepseek-ai/dsh-tools'].optional, true);
   assert.ok(!manifest.dependencies['@deepseek-ai/dsh-tools']);
+});
+
+test('the scanner imports with only declared production dependencies and no automatic peers', async t => {
+  const isolated = mkdtempSync(resolve(tmpdir(), 'phc-no-peers-'));
+  t.after(() => rmSync(isolated, { recursive: true, force: true }));
+  writeFileSync(resolve(isolated, 'package.json'), JSON.stringify(manifest));
+  cpSync(resolve(root, 'scripts'), resolve(isolated, 'scripts'), { recursive: true });
+  const pending = Object.keys(manifest.dependencies);
+  const copied = new Set();
+  // Model autoInstallPeers: false: copy only dependencies, never peerDependencies.
+  while (pending.length) {
+    const name = pending.shift();
+    if (copied.has(name)) continue;
+    copied.add(name);
+    const source = resolve(root, 'node_modules', name);
+    const target = resolve(isolated, 'node_modules', name);
+    mkdirSync(resolve(target, '..'), { recursive: true });
+    cpSync(source, target, { recursive: true });
+    const pkg = JSON.parse(readFileSync(resolve(source, 'package.json'), 'utf8'));
+    pending.push(...Object.keys(pkg.dependencies ?? {}));
+  }
+  const scanner = await import(pathToFileURL(resolve(isolated, 'scripts/dsh/scan.mjs')).href);
+  assert.equal(typeof scanner.auditDsh, 'function');
 });
 
 test('the published tarball contains the entry, scanner, patch and skill', () => {
